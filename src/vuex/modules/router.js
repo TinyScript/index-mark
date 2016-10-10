@@ -7,7 +7,7 @@ const state = {
 		page: ['/index'],
 		pageDir: 'next'
 	},
-	pageClick: false
+	pageClick: true
 }
 
 const mutations = {
@@ -36,9 +36,7 @@ const mutations = {
 	// 是否在页面中点击跳转
 	[IS_CLICK] (state) {
 		index.state.menu.isShow = false;
-		alert(state.pageClick)
-		state.pageClick = true;
-		alert(state.pageClick)
+		// state.pageClick = true;
 	},
 	[CLOSE_CLICK] (state) {
 		state.pageClick = false;
