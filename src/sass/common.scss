@@ -697,10 +697,12 @@ html, body {
 .next-enter {
 	position: fixed!important;
 	animation: nextIn .5s ease-in-out;
+	-webkit-animation: nextIn .5s ease-in-out;
 }
 .next-leave {
 	position: fixed!important;
 	animation: nextOut .5s ease-in-out;
+	-webkit-animation: nextOut .5s ease-in-out;
 }
 @keyframes nextIn {
 	from {
@@ -718,6 +720,36 @@ html, body {
 	}
 }
 @keyframes nextOut {
+	from {
+		-webkit-transform: translateX(0%); 
+		-moz-transform: translateX(0%); 
+		-ms-transform: translateX(0%); 
+		-o-transform: translateX(0%); 
+		transform: translateX(0%);
+	} to {
+		-webkit-transform: translateX(-100%); 
+		-moz-transform: translateX(-100%); 
+		-ms-transform: translateX(-100%); 
+		-o-transform: translateX(-100%); 
+		transform: translateX(-100%);
+	}
+}
+@-webkit-keyframes nextIn {
+	from {
+		-webkit-transform: translateX(100%); 
+		-moz-transform: translateX(100%); 
+		-ms-transform: translateX(100%); 
+		-o-transform: translateX(100%); 
+		transform: translateX(100%);
+	} to {
+		-webkit-transform: translateX(0%); 
+		-moz-transform: translateX(0%); 
+		-ms-transform: translateX(0%); 
+		-o-transform: translateX(0%); 
+		transform: translateX(0%);
+	}
+}
+@-webkit-keyframes nextOut {
 	from {
 		-webkit-transform: translateX(0%); 
 		-moz-transform: translateX(0%); 
