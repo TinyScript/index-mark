@@ -27,7 +27,7 @@ const mutations = {
 	// },
 	// 判断是前进还是后退
 	[JUDGE_PATH] (state, flag) {
-		if(flag === 'next'&&state.pageClick==true) {
+		if(flag === 'next') {
 			state.stack.pageDir = 'next'
 		} else {
 			state.stack.pageDir = 'prev'
@@ -37,6 +37,7 @@ const mutations = {
 	[IS_CLICK] (state) {
 		index.state.menu.isShow = false;
 		state.pageClick = true;
+		alert(document.getElementById('gkvBox').className)
 	},
 	[CLOSE_CLICK] (state) {
 		state.pageClick = false;

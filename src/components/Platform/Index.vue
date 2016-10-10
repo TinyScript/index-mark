@@ -2,20 +2,12 @@
 	import Menu from '../Menu.vue';
 	import Header from './Header.vue';
 	import Content from './Content.vue';
-	import { closeClick } from '../../vuex/actions';
 	export default {
 		name: 'Platform',
-		ready() {
-		  this.closeClick();
-		  alert('close success')
-		},
 		vuex: {
 			getters: {
 				stack: ({router}) => router.stack
-			},
-		    actions: {
-		    	closeClick
-		    }
+			}
 		},
 		components: {
 			'p-header': Header,

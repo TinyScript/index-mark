@@ -15600,27 +15600,16 @@
 
 	var _Content2 = _interopRequireDefault(_Content);
 
-	var _actions = __webpack_require__(15);
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	// <script type="text/javascript">
 	exports.default = {
 		name: 'Platform',
-		ready: function ready() {
-			this.closeClick();
-			alert('close success');
-		},
-
 		vuex: {
 			getters: {
 				stack: function stack(_ref) {
 					var router = _ref.router;
 					return router.stack;
 				}
-			},
-			actions: {
-				closeClick: _actions.closeClick
 			}
 		},
 		components: {
@@ -15643,6 +15632,7 @@
 	// 	@import "../../sass/productPage";
 	// 	@import "../../sass/platformPage";
 	// </style>
+	// <script type="text/javascript">
 
 /***/ },
 /* 69 */
@@ -16256,7 +16246,7 @@
 /* 87 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"gkvBox\" :transition=\"stack.pageDir\">\n\t<p-header></p-header>\n\t<p-content></p-content>\n\t<gkv-menu></gkv-menu>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"gkvBox\" :transition=\"stack.pageDir\">\n\t<p-header></p-header>\n\t<p-content></p-content>\n\t<gkv-menu></gkv-menu>\n</div>\n";
 
 /***/ },
 /* 88 */
@@ -20089,7 +20079,7 @@
 	};
 
 	var mutations = (_mutations = {}, (0, _defineProperty3.default)(_mutations, _mutationTypes.JUDGE_PATH, function (state, flag) {
-		if (flag === 'next' && state.pageClick == true) {
+		if (flag === 'next') {
 			state.stack.pageDir = 'next';
 		} else {
 			state.stack.pageDir = 'prev';
@@ -20097,6 +20087,7 @@
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.IS_CLICK, function (state) {
 		_index2.default.state.menu.isShow = false;
 		state.pageClick = true;
+		alert(document.getElementById('gkvBox').className);
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.CLOSE_CLICK, function (state) {
 		state.pageClick = false;
 	}), _mutations);
