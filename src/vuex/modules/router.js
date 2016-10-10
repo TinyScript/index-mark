@@ -37,7 +37,6 @@ const mutations = {
 	[IS_CLICK] (state) {
 		index.state.menu.isShow = false;
 		state.pageClick = true;
-		alert(document.getElementById('gkvBox').className)
 	},
 	[CLOSE_CLICK] (state) {
 		state.pageClick = false;

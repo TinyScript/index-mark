@@ -18857,9 +18857,10 @@
 				// 执行检测方法
 				console.log(hash);
 				if (_self.router.pageClick) {
-					console.log(_self.router.pageClick);
-					_self.goPath('next');
+					alert(document.getElementById('gkvBox').className);
 					_self.closeClick();
+					_self.goPath('next');
+					alert(document.getElementById('gkvBox').className);
 				} else {
 					_self.goPath('prev');
 				}
@@ -20087,7 +20088,6 @@
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.IS_CLICK, function (state) {
 		_index2.default.state.menu.isShow = false;
 		state.pageClick = true;
-		alert(document.getElementById('gkvBox').className);
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.CLOSE_CLICK, function (state) {
 		state.pageClick = false;
 	}), _mutations);
@@ -21123,7 +21123,7 @@
 /* 167 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"app\">\n\t<router-view></router-view>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"app\">\n\t<router-view></router-view>\n</div>\n";
 
 /***/ }
 /******/ ]);
