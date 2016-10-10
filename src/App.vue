@@ -11,10 +11,8 @@
 				// 执行检测方法
 				console.log(hash);
 				if(_self.router.pageClick) {
-		alert(document.getElementById('gkvBox').className)
 					_self.closeClick();
 					_self.goPath('next')
-		alert(document.getElementById('gkvBox').className)
 				} else {
 					_self.goPath('prev')
 				}
