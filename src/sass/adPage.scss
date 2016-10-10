@@ -1,0 +1,118 @@
+#gkvBox {
+	min-height: 100%;
+}
+#gkvAd {
+	position: absolute;
+    top: 0.98rem;
+}
+.ad__tabsBox {
+	width: 1.8rem;
+}
+.ad__tabsList {
+	height: 1.5rem;
+	text-align: center;
+	padding-top: 0.2rem;
+	box-sizing: border-box;
+	background-color: #e5e5e5;
+	color: #555;
+}
+.ad__tabsList.on {
+	background-color: #fff;
+	color: #333;
+}
+.ad__tabsImgBox {
+	width: 0.4rem;
+	height: 0.51rem;
+	margin: auto;
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: 100% auto;
+}
+.ad__tabsImgBox1 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/11.png');
+}
+.ad__tabsList.on .ad__tabsImgBox1 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/12.png');
+}
+.ad__tabsImgBox2 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/21.png');
+}
+.ad__tabsList.on .ad__tabsImgBox2 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/22.png');
+}
+.ad__tabsImgBox3 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/31.png');
+}
+.ad__tabsList.on .ad__tabsImgBox3 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/32.png');
+}
+.ad__tabsImgBox4 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/41.png');
+}
+.ad__tabsList.on .ad__tabsImgBox4 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/42.png');
+}
+.ad__tabsImgBox5 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/51.png');
+}
+.ad__tabsList.on .ad__tabsImgBox5 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/52.png');
+}
+.ad__tabsImgBox6 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/61.png');
+}
+.ad__tabsList.on .ad__tabsImgBox6 {
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/adPage/62.png');
+}
+.ad__tabsTextBox {
+	margin-top: 0.2rem;
+	line-height: 0.26rem;
+}
+.ad__contentsBox {
+	background-color: #fff;
+	min-height: 100%;
+}
+.ad__contentsList {
+	margin-left: 0.5rem;
+	width: 5.2rem;
+}
+.ad__subList {
+	padding-right: 0.5rem;
+	padding-bottom: 0.6rem;
+}
+.ad__subList:last-child {
+	padding-bottom: 0rem;
+}
+.ad__subListTitle {
+	height: 1.1rem;
+	line-height: 1.1rem;
+	border-bottom: 1px solid #ddd;
+}
+.ad__subListDesc {
+	border-bottom: 1px solid #ddd;
+}
+.ad__contentsList .ad__subList:last-child .ad__subListDesc:last-child {
+	border-bottom: 1px solid #fff
+}
+.ad__subListDescText {
+	height: 1.6rem;
+	display:table-cell; 
+	vertical-align:middle;
+	color: #6e6e6e;
+}
+.ad__moreBtnBox {
+	padding: 0.3rem 0rem;
+}
+.ad__moreBtn {
+	display: block;
+	height: 0.5rem;	
+	width: 1.8rem;
+	border: 1px solid #ddd;
+	line-height: 0.5rem;
+	text-align: center;
+	margin: auto;
+	background-color: #fff;
+	border-radius: 999px;
+	color: #6e6e6e;
+	outline: none;
+}

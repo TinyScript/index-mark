@@ -1,0 +1,251 @@
+#gkvIndustry {
+	margin-top: 0.35rem;
+}
+.industryBox {
+
+}
+.industry__list {
+	width: 100%;
+	height: 3rem;
+	position: relative;
+	margin-bottom: 0.35rem;
+}
+/** 正面 start **/
+.insdustry__positive {
+	position: absolute;
+	height: 100%;
+	background-color: #fff;
+	z-index: 1;
+}
+.idy__imgBox {
+	width: 3rem;
+	height: 3rem;
+	position: relative;
+}
+.idy__imgMask {
+	width: 3rem;
+	height: 3rem;
+	line-height: 3rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0rem 0.5rem;
+    box-sizing: border-box;
+    display: flex;
+	text-align: center;
+	position: absolute;
+	top: 0rem;
+	left: 0rem;
+	color: #fff;
+	font-size: 0.36rem;
+	background-color: rgba(0,0,0,.2);
+}
+.idy__img {
+	width: 100%;
+	height: 100%;
+	vertical-align: middle;
+}
+.idy__descBox {
+	width: 4.5rem;
+	padding: 0.26rem 0rem 0.3rem 0.3rem;
+	color: #999;
+	font-size: 0.24rem;
+	box-sizing: border-box;
+    height: 3rem;
+}
+@media (max-width: 320px) {
+	.idy__descBox {
+		padding-left: 0.2rem;
+	}
+}
+.idy__titleBox {
+	line-height: 0.3rem;
+	height: 0.3rem;
+}
+.idy__No {
+	margin-left: 0.4rem;
+	width: 0.9rem;
+	height: 0.3rem;
+	line-height: 0.3rem;
+	font-size: 0.22rem;
+	color: #fff;
+	border-radius: 999px;
+	text-align: center;
+	display: inline-block;
+}
+.idy__titleBox .icon {
+	font-size: 0.4rem;
+    margin-left: 1.24rem;
+}
+.idy__money {
+	font-size: 0.36rem;
+	color: #333;
+    line-height: 0.36rem;
+    height: 0.38rem;
+    margin-top: 0.22rem;
+    margin-bottom: 0.43rem;
+}
+.idy__moneyUnit {
+	font-size: 0.24rem;
+	color: #999;
+}
+.idy__cxtLeftBox {
+	font-size: 0.24rem;
+    margin-right: 0.2rem;
+
+}
+.idy__cxtList {
+	height: 0.26rem;
+    line-height: 0.24rem;
+    margin-bottom: 0.17rem;
+}
+.idy__cxtList .idy__moneyUnit {
+	font-size: 0.22rem;
+}
+.idy__cxtList .idy__No {
+	margin-left: 0rem;
+    border: 1px solid;
+}
+.idy__cxtMiddleBox {
+	margin-right: 0.2rem;
+}
+/** 正面 start **/
+
+/** 反面 start **/
+.insdustry__mask {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 10;	
+	max-width: 7.5rem;
+	display: none;
+	margin: auto;
+}
+.insdustry__opposite {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	margin: auto;
+    width: 4rem;
+    height: 3rem;
+	background-color: rgba(0,0,0,.6);
+	color: #fff;
+	padding: 0.57rem 0.24rem;
+	box-sizing: border-box;
+	border-radius: 3px;
+}
+.industry__list.on .insdustry__opposite {
+	animation-name: opacity1;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	-webkit-animation-name: opacity1;
+	-webkit-animation-duration: 1s;
+	-webkit-animation-fill-mode: forwards;
+}
+.industry__list.off .insdustry__opposite {
+	animation-name: opacity0;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	-webkit-animation-name: opacity0;
+	-webkit-animation-duration: 1s;
+	-webkit-animation-fill-mode: forwards;
+}
+/** 反面 end **/
+
+
+
+/** 反转 **/
+@keyframes opacity1 {
+	from {
+		opacity: 0;
+	} to {
+		opacity: 1;
+	}
+}
+
+@keyframes opacity0 {
+	from {
+		opacity: 1;
+	} to {
+		opacity: 0;
+	}
+}
+/*.rotateTurn {
+	animation-name: rY;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	-webkit-animation-name: rY;
+	-webkit-animation-duration: 1s;
+	-webkit-animation-fill-mode: forwards;
+}
+.clearTurn {
+	animation-name: cY;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	-webkit-animation-name: cY;
+	-webkit-animation-duration: 1s;
+	-webkit-animation-fill-mode: forwards;
+}
+.rotateTurn .insdustry__opposite {
+	animation-name: opacity1;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	-webkit-animation-name: opacity1;
+	-webkit-animation-duration: 1s;
+	-webkit-animation-fill-mode: forwards;
+}
+.clearTurn .insdustry__opposite {
+	animation-name: opacity0;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	-webkit-animation-name: opacity0;
+	-webkit-animation-duration: 1s;
+	-webkit-animation-fill-mode: forwards;
+}
+@keyframes rY {
+	from {
+		transform: rotateY(0deg);
+	} to {
+		transform: rotateY(180deg);
+	}
+}
+@-webkit-keyframes rY {
+	from {
+		-webkit-transform: rotateY(0deg);
+	} to {
+		-webkit-transform: rotateY(180deg);
+	}
+}
+@keyframes cY {
+	from {
+		-webkit-transform: rotateY(180deg);
+	} to {
+		-webkit-transform: rotateY(0deg);
+	}
+}
+@-webkit-keyframes cY {
+	from {
+		-webkit-transform: rotateY(180deg);
+	} to {
+		-webkit-transform: rotateY(0deg);
+	}
+}
+@-webkit-keyframes opacity1 {
+	from {
+		opacity: 0;
+	} to {
+		opacity: 1;
+	}
+}
+@-webkit-keyframes opacity0 {
+	from {
+		opacity: 1;
+	} to {
+		opacity: 0;
+	}
+}*/
+
+/** 反转 **/

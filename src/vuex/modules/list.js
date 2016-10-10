@@ -1,0 +1,260 @@
+import { LIST_TABS } from '../mutation-types';
+
+const state = {
+	items: {
+		'无人机': {
+			'增速榜': [
+				{
+					title: 'PowerEgg无人机',
+					statusTxt: '众筹中',
+					img: '//img30.360buyimg.com/cf/jfs/t3184/269/884813611/64066/2a2621cb/57c1040dN33b53e1e.jpg',
+					growthMoney: 4322661,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 254,
+					support: 23870,
+					remainDay: 32,
+					rank: 1,
+					status: 2,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1313525600000
+				},
+				{
+					title: '立真多功能炫彩发光手机支架',
+					statusTxt: '众筹中',
+					img: 'http://image.suning.cn/uimg/cfs/project/147254208242817360.jpg',
+					growthMoney: 799730,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 95,
+					support: 35954,
+					remainDay: 56,
+					rank: 2,
+					status: 2,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473825600000
+				},
+				{
+					title: 'Lebath乐泡机',
+					statusTxt: '众筹成功',
+					img: '//img30.360buyimg.com/cf/jfs/t3022/62/611692095/123181/4a7c4cd9/57a8a0d4N8fe94648.jpg',
+					growthMoney: 1237283,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 123,
+					support: 6030,
+					remainDay: 0,
+					rank: 3,
+					status: 3,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473825600000
+				},
+				{
+					title: 'eora 3D - High-precision 3D Scanning',
+					statusTxt: '无限众筹',
+					img: 'https://s3.cn-north-1.amazonaws.com.cn/imgs/zhongchou/cover/4/7143.jpg',
+					growthMoney: 148859.94,
+					growthMoneyOrg: 22631,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'USD',
+					flag: 1,
+					finishPer: 254,
+					support: 23870,
+					remainDay: 32,
+					rank: 1,
+					status: 0,
+					foreverStatus: 1,
+					currencyId: 2,
+					createDate: 1473825600000
+				}
+			],
+			'新上': [
+				{
+					title: 'PowerEgg无人机',
+					statusTxt: '众筹中',
+					img: '//img30.360buyimg.com/cf/jfs/t3184/269/884813611/64066/2a2621cb/57c1040dN33b53e1e.jpg',
+					growthMoney: 4322661,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 254,
+					support: 23870,
+					remainDay: 32,
+					rank: 1,
+					status: 2,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473725600000
+				},
+				{
+					title: '立真多功能炫彩发光手机支架',
+					statusTxt: '众筹中',
+					img: 'http://image.suning.cn/uimg/cfs/project/147254208242817360.jpg',
+					growthMoney: 799730,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 95,
+					support: 35954,
+					remainDay: 56,
+					rank: 2,
+					status: 2,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473825600000
+				},
+				{
+					title: 'Lebath乐泡机',
+					statusTxt: '众筹成功',
+					img: '//img30.360buyimg.com/cf/jfs/t3022/62/611692095/123181/4a7c4cd9/57a8a0d4N8fe94648.jpg',
+					growthMoney: 1237283,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 123,
+					support: 6030,
+					remainDay: 0,
+					rank: 3,
+					status: 3,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473825600000
+				},
+				{
+					title: 'eora 3D - High-precision 3D Scanning',
+					statusTxt: '无限众筹',
+					img: 'https://s3.cn-north-1.amazonaws.com.cn/imgs/zhongchou/cover/4/7143.jpg',
+					growthMoney: 148859.94,
+					growthMoneyOrg: 22631,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'USD',
+					flag: 1,
+					finishPer: 254,
+					support: 23870,
+					remainDay: 32,
+					rank: 1,
+					status: 0,
+					foreverStatus: 1,
+					currencyId: 2,
+					createDate: 1473825600000
+				}
+			],
+			'已结束': [
+				{
+					title: 'PowerEgg无人机',
+					statusTxt: '众筹中',
+					img: '//img30.360buyimg.com/cf/jfs/t3184/269/884813611/64066/2a2621cb/57c1040dN33b53e1e.jpg',
+					growthMoney: 4322661,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 254,
+					support: 23870,
+					remainDay: 32,
+					rank: 1,
+					status: 2,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473825600000
+				},
+				{
+					title: '立真多功能炫彩发光手机支架',
+					statusTxt: '众筹中',
+					img: 'http://image.suning.cn/uimg/cfs/project/147254208242817360.jpg',
+					growthMoney: 799730,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 95,
+					support: 35954,
+					remainDay: 56,
+					rank: 2,
+					status: 2,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473825600000
+				},
+				{
+					title: 'Lebath乐泡机',
+					statusTxt: '众筹成功',
+					img: '//img30.360buyimg.com/cf/jfs/t3022/62/611692095/123181/4a7c4cd9/57a8a0d4N8fe94648.jpg',
+					growthMoney: 1237283,
+					growthMoneyOrg: 0,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'RMB',
+					flag: 1,
+					finishPer: 123,
+					support: 6030,
+					remainDay: 0,
+					rank: 3,
+					status: 3,
+					foreverStatus: 0,
+					currencyId: 1,
+					createDate: 1473825600000
+				},
+				{
+					title: 'eora 3D - High-precision 3D Scanning',
+					statusTxt: '无限众筹',
+					img: 'https://s3.cn-north-1.amazonaws.com.cn/imgs/zhongchou/cover/4/7143.jpg',
+					growthMoney: 148859.94,
+					growthMoneyOrg: 22631,
+					currMoney: 1845064.58,
+					currMoneyOrg: 280503,
+					unit: 'USD',
+					flag: 1,
+					finishPer: 254,
+					support: 23870,
+					remainDay: 32,
+					rank: 1,
+					status: 0,
+					foreverStatus: 1,
+					currencyId: 2,
+					createDate: 1473825600000
+				}
+			]
+		}
+	},
+	tabs: [
+		'增速榜',
+		'新上',
+		'已结束'
+	],
+	activeTitle: '无人机',
+	activeTabs: '增速榜'
+}
+
+const mutations = {
+	[LIST_TABS] (state, _key) {
+		state.activeTabs = _key;
+	}
+}
+
+export default {
+	state,
+	mutations
+}

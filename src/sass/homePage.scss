@@ -1,0 +1,473 @@
+.none_border {
+	border: none!important;
+}
+#gkvHeader-home {
+	width: 100%;
+	height: 3.34rem;
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/homePage/home_bg.png');
+	background-size: cover;
+}
+.nav-home {
+    width: 100%;
+    height: 0.96rem;
+    position: relative;
+}
+.nav__topTitle-home {
+	position: absolute;
+	width: 70%;
+	top: 0;
+	left: 0;
+	right: 0;
+    height: 0.96rem;
+    line-height: 0.96rem;
+    margin: auto;
+	text-align: center;
+    font-size: 0.36rem;
+    color: #fff;
+}
+.pnc__main {
+    line-height: 1rem;
+}
+/*.pnc__main .icon {
+	font-size: 0.36rem;
+}*/
+.nav__menuBox-home {
+    line-height: 0.96rem;
+    padding-left: 0.3rem;
+    box-sizing: border-box;
+}
+.nav__menuIcon-home {
+    margin-right: 0.24rem;
+}
+.nav__menuIcon-home .icon {
+    font-size: 0.44rem;
+    line-height: 0.92rem;
+    color: #fff;
+}
+/*.nav__searchBox {
+    width: 2.5rem;
+    height: 100%;
+    margin-right: 0.27rem;
+    padding: 0.16rem 0rem;
+    box-sizing: border-box;
+    position: relative;
+}
+.nav__searchBox .icon {
+    position: absolute;
+    font-size: 0.35rem;
+    top: 50%;
+    right: 0rem;
+    line-height: 0.50rem;
+    margin-top: -0.26rem;
+    color: #e5e5e5;
+}*/
+.searchBox-home {
+	box-sizing: border-box;
+	height: 0.96rem;
+    line-height: 0.56rem;
+    background-color: transparent;
+    padding: 0.16rem 0 0;
+    width: 5rem;
+    margin: auto;
+    position: relative;
+}
+.search__InptBox-home {
+	position: relative;
+}
+.searchBox-home .search__Inpt-home {
+	height: 0.58rem;
+	border-radius: 999px;
+	padding-left: 0.7rem;
+	box-sizing: border-box;
+	outline: none;
+	width: 5rem;
+    background-color: rgba(0,0,0,.15);
+    border: 1px solid transparent;
+    padding-right: 0.2rem;
+    color: #ddd;
+}
+.search__InptBox-home .searchIcon-home {
+    position: absolute;
+    font-size: 0.40rem;
+    top: 50%;
+    left: 0.2rem;
+    line-height: 0.40rem;
+    margin-top: -0.2rem;
+	color: #ddd;
+}
+.search__clear-home .icon {
+	color: #ddd;
+}
+.search__Inpt-home::-webkit-input-placeholder {
+	color: #ddd;
+}
+.search__btn-home {
+	position: absolute;
+	right: 0;
+	z-index: -1;
+	/*opacity: 0;*/
+	color: #fff;
+}
+.nav__titleBox {
+	clear: both;
+	text-align: center;
+	color: #fff;
+	margin-top: 0.19rem;
+}
+.nav__title {
+    height: 0.56rem;
+}
+.titleLogo {
+	width: 2rem;
+	height: 0.53rem;
+}
+/*.nav__title::after {
+	content: '';
+	display: block;
+	width: 1rem;
+	height: 0.05rem;
+	background-color: #fff;
+	margin: 0.21rem auto;
+	border-radius: 999px;
+}*/
+.nav__desc {
+    padding-top: 0.2rem;
+}
+/*gkvContent block start*/
+#gkvContent {
+
+}
+.home__compareWrap {
+	background-color: #fff;
+	padding-top: 0rem;
+	padding-bottom: 0.4rem;
+	margin-bottom: 0.35rem;
+}
+.home__compareWrap:last-child {
+    margin-bottom: 0rem;
+}
+
+.home__pfCompareBox {
+    padding: 0.3rem 0.3rem 0;
+}
+.pfCompareList {
+	text-align: center;
+	width: 25%;
+}
+.pfCompareList:last-child {
+	margin-right: 0rem;
+}
+.logoImg {
+	width: 0.97rem;
+	height: 0.97rem;
+}
+
+.home__processWrap {
+	width: 100%;
+	height: 2.5rem;
+	position: relative;
+    text-indent: 0.3rem;
+    margin-bottom: 0.35rem;
+}
+.home__processLink {
+	display: block;
+	width: 100%;
+	height: 100%;
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/homePage/process_bg.png');
+	background-size: cover;
+	padding-top: 0.19rem;
+	box-sizing: border-box;
+}
+.home__processTitle {
+	color: #333;
+    font-weight: bold;
+}
+
+.home__pfName {
+	font-size: 0.24rem;
+	color: #999;
+}
+.home__pfMoney {
+	font-size: 0.28rem;
+	color: #333;
+}
+.home__pfCompareLinks {
+	color: #333;
+	display: block;
+	font-size: 0.3rem;
+	height: 0.3rem;
+	line-height: 0.3rem;
+	padding: 0.18rem 0rem;
+	width: 5rem;
+	border: 1px solid #65c3df;
+	border-radius: 999px;
+	text-align: center;
+	margin: 0.41rem auto 0rem;
+}
+
+.home__compareTitle {
+	display: block;
+	color: #333;
+	width: 100%;
+	padding-top: 0.3rem;
+	font-size: 0.28rem;
+	height: 0.28rem;
+	line-height: 0.26rem;
+	padding-bottom: 0.3rem;
+	text-indent: 0.3rem;
+	font-weight: bold;
+	border-bottom: 1px solid #ddd;
+}
+.home__compareTitle .icon {
+    font-size: 0.3rem;
+    margin-right: 0.3rem;
+    color: #e5e5e5;
+}
+.home_compareSubTitle {
+	font-size: 0.24rem;
+	color: #999;
+	font-weight: normal;
+	margin-left: 0.2rem;
+}
+.home__idyCompareList {
+	text-align: center;
+	width: 2.5rem;
+	height: 1.82rem;
+    box-sizing: border-box;
+	margin-top: 0.3rem;
+	border-right: 1px solid #ddd;
+}
+.home__idyCompareList:last-child {
+	border-right: 0;
+}
+.home__idyName {
+	color: #333;
+	font-size: 0.36rem;
+	height: 0.36rem;
+	line-height: 0.34rem;
+	margin-top: 0.2rem;
+}
+.home__idyMoney {
+	color: #999;
+	font-size: 0.28rem;
+	height: 0.28rem;
+	line-height: 0.26rem;
+	margin-top: 0.26rem;
+}
+.home__idyMoney .unit {
+	font-size: 0.24rem;
+}
+.home__fundingProPanel {
+	border-bottom: 1px solid #ddd;
+	position: relative;
+}
+.home__fundingLinks {
+	color: #333;
+}
+.home__fundingShowMore {
+    position: absolute;
+    bottom: -0.34rem;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    width: 5.5rem;
+    margin: auto;
+}
+.home__showMoreLink {
+    color: #333;
+    display: block;
+    font-size: 0.3rem;
+    height: 0.3rem;
+    line-height: 0.3rem;
+    padding: 0.18rem 0rem;
+    width: 5rem;
+    border: 1px solid #ddd;
+    border-radius: 999px;
+    text-align: center;
+    margin: 0rem auto;
+}
+.home__fundingImg {
+	width: 100%;
+	height: 3.6rem;
+	background-image: url('https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/img.jpg');
+	background-size: 100%;
+	background-position: center top;
+	position: relative;
+}
+.home__fundingStatus {
+	position: absolute;
+	left: 0.3rem;
+	top: 0.3rem;
+	width: 1.2rem;
+	height: 0.4rem;
+	border-radius: 999px;
+	background-color: #f3565d;
+	text-align: center;
+	font-size: 0.24rem;
+	line-height: 0.4rem;
+	color: #fff;
+}
+.home__fundingName {
+    border-top: 1px solid #ddd;
+    padding-top: 0.19rem;
+    padding-bottom: 0.19rem;
+}
+.home__logo {
+    display: inline-block;
+    line-height: 0.3rem;
+    height: 0.3rem;
+    border-radius: 999px;
+    padding: 0.07rem 0.15rem;
+    vertical-align: top;
+}
+.home__fundingDescBox {
+	padding: 0.2rem 0.3rem;
+	height: 0.36rem;
+	line-height: 0.36rem;
+}
+.home__fundingDescBox.home__fcMoneyBox {
+    padding: 0rem 0.3rem;
+    height: 1.15rem;
+    line-height: 1.15rem;
+    position: relative;
+}
+.home__fundingCate {
+	line-height: 0.34rem;
+	font-size: 0.28rem;
+	color: #999;
+	margin-right: 0.3rem;
+}
+.home__fundingDescBox.home__fcMoneyBox .home__fundingCate {
+	line-height: 1.15rem;
+	height: 1.15rem;
+}
+.home__fundingMoney {
+	font-size: 0.36rem;
+	color: #f3565d;
+}
+.home__fcWrap {
+    line-height: 0.4rem;
+    text-align: center;
+    margin: 0.15rem 0rem 0rem 0.3rem;
+    color: #999;
+}
+.home__fcTop {
+    border-bottom: 1px solid #ddd;
+    font-size: 0.24rem;
+}
+.home__fcTop .moneyLight {
+    font-size: 0.36rem;
+}
+.home__fcDown {
+	font-size: 0.22rem;
+}
+.home__fcDown .moneyLight {
+    font-size: 0.3rem;
+}
+.home__unit {
+    font-size: 0.24rem;
+    margin-left: 0.15rem;
+    color: #999;
+}
+/*gkvContent block end*/
+
+.searchBoxOn {
+	animation-name: searchBoxOn;
+	animation-duration: 0.3s;
+	animation-timing-function: ease;
+	animation-fill-mode: forwards;
+}
+.searchOn {
+	animation-name: searchOn;
+	animation-duration: 0.3s;
+	animation-timing-function: ease;
+	animation-fill-mode: forwards;
+}
+.searchBtnOn {
+	z-index: 99;
+	animation-name: searchBtnOn;
+	animation-duration: 0.6s;
+	animation-timing-function: ease;
+	animation-fill-mode: forwards;
+}
+@keyframes searchBoxOn {
+	from {
+		width: 5rem;
+	}
+	to {
+		width: 6.8rem;
+	}
+}
+@keyframes searchOn {
+	from {
+		width: 5rem;
+	}
+	to {
+		width: 6rem;
+	}
+}
+@keyframes searchBtnOn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+.searchBoxOut {
+	animation-name: searchBoxOut;
+	animation-duration: 0.3s;
+	animation-fill-mode: forwards;
+	animation-timing-function: ease;
+}
+
+.searchOut {
+	animation-name: searchOut;
+	animation-duration: 0.3s;
+	animation-fill-mode: forwards;
+	animation-timing-function: ease;
+}
+
+.searchBtnOut {
+	animation-name: searchBtnOut;
+	animation-duration: 0.3s;
+	animation-fill-mode: forwards;
+	animation-timing-function: ease;
+}
+@keyframes searchBoxOut {
+	from {
+		width: 6.8rem;
+	} 
+	to {
+		width: 5rem;
+	}
+}
+@keyframes searchOut {
+	from {
+		width: 6rem;
+	} 
+	to {
+		width: 5rem;
+	}
+}
+@keyframes searchBtnOut {
+	from {
+		opacity: 1;
+	} 
+	to {
+		opacity: 0;
+	}
+}
+
+/** android css start **/
+._searchBoxOn {
+	width: 6.8rem!important;
+}
+._searchOn {
+	width: 6rem!important;
+}
+._searchBtnOn {
+	display: block!important;
+	z-index: 99!important;
+}
+/** android css end **/
