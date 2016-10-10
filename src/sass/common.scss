@@ -736,10 +736,11 @@ html, body {
 .prev-enter {
 	position: fixed!important;
 	animation: prevIn .5s ease-in-out;
+	-webkit-animation: prevIn .5s ease-in-out;
 }
 .prev-leave {
 	position: fixed!important;
-	animation: prevOut .5s ease-in-out;
+	-webkit-animation: prevOut .5s ease-in-out;
 }
 @keyframes prevIn {
 	from {
@@ -757,6 +758,36 @@ html, body {
 	}
 }
 @keyframes prevOut {
+	from {
+		-webkit-transform: translateX(0%); 
+		-moz-transform: translateX(0%); 
+		-ms-transform: translateX(0%); 
+		-o-transform: translateX(0%); 
+		transform: translateX(0%);
+	} to {
+		-webkit-transform: translateX(100%); 
+		-moz-transform: translateX(100%); 
+		-ms-transform: translateX(100%); 
+		-o-transform: translateX(100%); 
+		transform: translateX(100%);
+	}
+}
+@-webkit-keyframes prevIn {
+	from {
+		-webkit-transform: translateX(-100%); 
+		-moz-transform: translateX(-100%); 
+		-ms-transform: translateX(-100%); 
+		-o-transform: translateX(-100%); 
+		transform: translateX(-100%);
+	} to {
+		-webkit-transform: translateX(0%); 
+		-moz-transform: translateX(0%); 
+		-ms-transform: translateX(0%); 
+		-o-transform: translateX(0%); 
+		transform: translateX(0%);
+	}
+}
+@-webkit-keyframes prevOut {
 	from {
 		-webkit-transform: translateX(0%); 
 		-moz-transform: translateX(0%); 
