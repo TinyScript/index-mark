@@ -5,12 +5,9 @@
 	import { closeClick } from '../../vuex/actions';
 	export default {
 		name: 'Platform',
-		route: {
-			activate: function (transition) {
-			  this.closeClick();
-			  alert('close success')
-		      transition.next()
-		    }
+		ready() {
+		  this.closeClick();
+		  alert('close success')
 		},
 		vuex: {
 			getters: {

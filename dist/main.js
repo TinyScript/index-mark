@@ -15607,13 +15607,11 @@
 	// <script type="text/javascript">
 	exports.default = {
 		name: 'Platform',
-		route: {
-			activate: function activate(transition) {
-				this.closeClick();
-				alert('close success');
-				transition.next();
-			}
+		ready: function ready() {
+			this.closeClick();
+			alert('close success');
 		},
+
 		vuex: {
 			getters: {
 				stack: function stack(_ref) {
@@ -16258,7 +16256,7 @@
 /* 87 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"gkvBox\" :transition=\"stack.pageDir\">\n\t<p-header></p-header>\n\t<p-content></p-content>\n\t<gkv-menu></gkv-menu>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"gkvBox\" :transition=\"stack.pageDir\">\n\t<p-header></p-header>\n\t<p-content></p-content>\n\t<gkv-menu></gkv-menu>\n</div>\n";
 
 /***/ },
 /* 88 */
@@ -20087,7 +20085,7 @@
 			page: ['/index'],
 			pageDir: 'next'
 		},
-		pageClick: true
+		pageClick: false
 	};
 
 	var mutations = (_mutations = {}, (0, _defineProperty3.default)(_mutations, _mutationTypes.JUDGE_PATH, function (state, flag) {
@@ -20098,7 +20096,7 @@
 		}
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.IS_CLICK, function (state) {
 		_index2.default.state.menu.isShow = false;
-		// state.pageClick = true;
+		state.pageClick = true;
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.CLOSE_CLICK, function (state) {
 		state.pageClick = false;
 	}), _mutations);
