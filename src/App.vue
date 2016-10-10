@@ -12,8 +12,8 @@
 				console.log(hash);
 				if(_self.router.pageClick) {
 					console.log(_self.router.pageClick)
-					_self.closeClick();
 					_self.goPath('next')
+					_self.closeClick();
 				} else {
 					_self.goPath('prev')
 				}
