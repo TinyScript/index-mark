@@ -20079,6 +20079,7 @@
 	};
 
 	var mutations = (_mutations = {}, (0, _defineProperty3.default)(_mutations, _mutationTypes.JUDGE_PATH, function (state, flag) {
+		alert(1);
 		if (flag === 'next') {
 			state.stack.pageDir = 'next';
 		} else {
