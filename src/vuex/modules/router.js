@@ -27,7 +27,6 @@ const mutations = {
 	// },
 	// 判断是前进还是后退
 	[JUDGE_PATH] (state, flag) {
-		alert(1)
 		if(flag === 'next') {
 			state.stack.pageDir = 'next'
 		} else {
@@ -38,6 +37,7 @@ const mutations = {
 	[IS_CLICK] (state) {
 		index.state.menu.isShow = false;
 		state.pageClick = true;
+		alert(1)
 	},
 	[CLOSE_CLICK] (state) {
 		state.pageClick = false;
