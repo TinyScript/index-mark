@@ -7,15 +7,18 @@
 		ready() {
 			var _self = this;
 			window.addEventListener('popstate',function(e) {
-				var hash = window.location.hash.substring(2);
-				// 执行检测方法
-				console.log(hash);
-				if(_self.router.pageClick) {
-					_self.closeClick();
-					_self.goPath('next')
-				} else {
-					_self.goPath('prev')
-				}
+				setTimeout(function() {
+					var hash = window.location.hash.substring(2);
+					// 执行检测方法
+					console.log(hash);
+					if(_self.router.pageClick) {
+						_self.closeClick();
+						_self.goPath('next')
+					} else {
+						_self.goPath('prev')
+					}
+					alert(1)
+				},200)
 				// console.log('改前：')
 				// console.log(_self.test.ym)
 				// // if(hash=='/index') {
