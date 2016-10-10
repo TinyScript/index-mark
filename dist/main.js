@@ -20086,8 +20086,9 @@
 		}
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.IS_CLICK, function (state) {
 		_index2.default.state.menu.isShow = false;
+		alert(state.pageClick);
 		state.pageClick = true;
-		alert(1);
+		alert(state.pageClick);
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.CLOSE_CLICK, function (state) {
 		state.pageClick = false;
 	}), _mutations);

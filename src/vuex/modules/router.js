@@ -36,8 +36,9 @@ const mutations = {
 	// 是否在页面中点击跳转
 	[IS_CLICK] (state) {
 		index.state.menu.isShow = false;
+		alert(state.pageClick)
 		state.pageClick = true;
-		alert(1)
+		alert(state.pageClick)
 	},
 	[CLOSE_CLICK] (state) {
 		state.pageClick = false;
