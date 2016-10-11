@@ -13,7 +13,8 @@ import {
 	LIST_TABS,
 	PRODUCT_TABS,
 	IS_FOCUS,
-	IS_REPLY 
+	IS_REPLY,
+	NONE_ALERT 
 } from './mutation-types';
 
 /** common **/
@@ -42,6 +43,9 @@ export const listTabs = makeAction(LIST_TABS);
 export const protTabs = makeAction(PRODUCT_TABS);
 export const isFocus = makeAction(IS_FOCUS);
 export const isReply = makeAction(IS_REPLY);
+
+/** NONE_ALERT **/
+export const noneAlert = makeAction(NONE_ALERT);
 
 function makeAction(type) {
 	return ({dispatch}, ...args) => {dispatch(type, ...args)}

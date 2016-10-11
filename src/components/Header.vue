@@ -1,9 +1,10 @@
 <script type="text/javascript">
-	import { isShowMenu } from '../vuex/actions'
+	import { isShowMenu, noneAlert } from '../vuex/actions'
 	export default {
 		vuex: {
 			actions: {
-				isShowMenu
+				isShowMenu,
+				noneAlert
 			}
 		}
 	}
@@ -15,7 +16,8 @@
 			<i class="icon iconfont"></i>
 		</div>
 	</div>
-	<a v-link="{path:'center'}" class="pnc__main pnc__mainLink fr">
+	<!-- v-link="{path:'center'}"-->
+	<a @click="noneAlert" class="pnc__main pnc__mainLink fr">
 		<i class="icon iconfont"></i>
 	</a>
 </template>

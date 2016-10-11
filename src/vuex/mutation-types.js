@@ -19,3 +19,5 @@ export const LIST_TABS = 'LIST_TABS';
 export const PRODUCT_TABS = 'PRODUCT_TABS';
 export const IS_FOCUS = 'IS_FOCUS';
 export const IS_REPLY = 'IS_REPLY';
+
+export const NONE_ALERT = "NONE_ALERT";

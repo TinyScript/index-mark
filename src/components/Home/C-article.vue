@@ -1,10 +1,11 @@
 <script type="text/javascript">
-	import { isClick } from '../../vuex/actions';
+	import { isClick, noneAlert } from '../../vuex/actions';
 	export default {
 		props: ['article'],
 		vuex: {
 			actions: {
-				isClick
+				isClick,
+				noneAlert
 			}
 		}
 	}

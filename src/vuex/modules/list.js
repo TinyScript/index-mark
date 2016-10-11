@@ -7,7 +7,7 @@ const state = {
 				{
 					title: 'PowerEgg无人机',
 					statusTxt: '众筹中',
-					img: '//img30.360buyimg.com/cf/jfs/t3184/269/884813611/64066/2a2621cb/57c1040dN33b53e1e.jpg',
+					img: '//img30.360buyimg.com/cf/jfs/t3256/92/2408835734/143233/7c0be473/57e10e7fN1ac0bf53.jpg',
 					growthMoney: 4322661,
 					growthMoneyOrg: 0,
 					currMoney: 1845064.58,

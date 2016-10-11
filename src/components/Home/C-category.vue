@@ -1,10 +1,11 @@
 <script type="text/javascript">
-	import { isClick } from '../../vuex/actions'
+	import { isClick, noneAlert } from '../../vuex/actions';
 	export default {
 		props: ['category'],
 		vuex: {
 			actions: {
-				isClick
+				isClick,
+				noneAlert
 			}
 		}
 	}
@@ -18,7 +19,10 @@
 			{{ category.title }}
 			<i class="icon iconfont fr"></i>
 		</a>
-		<div v-for="item in category.list" class="home__idyCompareList fl mask__cate" :data-id="item.dataId">
+		<div v-for="item in category.list" 
+			 class="home__idyCompareList fl mask__cate" 
+			 :data-id="item.dataId"
+			 @click="noneAlert">
 			<div class="home__idyName searchVal">{{ item.name }}</div>
 			<div class="home__idyMoney">{{ item.title }}</div>
 			<div class="home__idyMoney">{{ item.money }} <span class="unit">{{ item.unit }}</span></div>

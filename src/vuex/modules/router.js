@@ -1,5 +1,5 @@
 // 页面存储池
-import { JUDGE_PATH, IS_CLICK, CLOSE_CLICK } from '../mutation-types';
+import { JUDGE_PATH, IS_CLICK, CLOSE_CLICK, NONE_ALERT } from '../mutation-types';
 import index from './index'
 
 const state = {
@@ -40,6 +40,10 @@ const mutations = {
 	},
 	[CLOSE_CLICK] (state) {
 		state.pageClick = false;
+	},
+	/** 未开放功能 **/
+	[NONE_ALERT] (state) {
+		alert('功能善未完工，敬请期待 :)');
 	}
 }
 

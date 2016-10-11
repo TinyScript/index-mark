@@ -1,10 +1,11 @@
 <script type="text/javascript">
-	import { isClick } from '../../vuex/actions';
+	import { isClick, noneAlert } from '../../vuex/actions';
 	export default {
 		props: ['funding'],
 		vuex: {
 			actions: {
-				isClick
+				isClick,
+				noneAlert
 			}
 		}
 	}
@@ -18,7 +19,8 @@
 		</a>
 		<ul class="home__fundingProPanel">
 			<li v-for="item in funding.list" class="home__fundingProList">
-				<a :href="item.itemLink" class="home__fundingLinks">
+				<!-- :href="item.itemLink" -->
+				<a @click="noneAlert" class="home__fundingLinks">
 					<div class="home__fundingName container">
 						{{ item.name }}
 						<div class="home__logo h_bg2">{{ item.platform }}</div>

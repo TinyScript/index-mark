@@ -66,7 +66,6 @@
 
 	// import common from './sass/common.scss';
 
-
 	_vue2.default.use(_vueRouter2.default);
 
 	var router = new _vueRouter2.default();
@@ -83,8 +82,8 @@
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(process) {/*!
-	 * Vue.js v1.0.28
+	/* WEBPACK VAR INJECTION */(function(global, process) {/*!
+	 * Vue.js v1.0.26
 	 * (c) 2016 Evan You
 	 * Released under the MIT License.
 	 */
@@ -240,7 +239,7 @@
 	}
 
 	/**
-	 * Camelize a hyphen-delimited string.
+	 * Camelize a hyphen-delmited string.
 	 *
 	 * @param {String} str
 	 * @return {String}
@@ -263,10 +262,10 @@
 	 * @return {String}
 	 */
 
-	var hyphenateRE = /([^-])([A-Z])/g;
+	var hyphenateRE = /([a-z\d])([A-Z])/g;
 
 	function hyphenate(str) {
-	  return str.replace(hyphenateRE, '$1-$2').replace(hyphenateRE, '$1-$2').toLowerCase();
+	  return str.replace(hyphenateRE, '$1-$2').toLowerCase();
 	}
 
 	/**
@@ -486,7 +485,12 @@
 	var isIE = UA && UA.indexOf('trident') > 0;
 	var isIE9 = UA && UA.indexOf('msie 9.0') > 0;
 	var isAndroid = UA && UA.indexOf('android') > 0;
-	var isIOS = UA && /iphone|ipad|ipod|ios/.test(UA);
+	var isIos = UA && /(iphone|ipad|ipod|ios)/i.test(UA);
+	var iosVersionMatch = isIos && UA.match(/os ([\d_]+)/);
+	var iosVersion = iosVersionMatch && iosVersionMatch[1].split('_');
+
+	// detecting iOS UIWebView by indexedDB
+	var hasMutationObserverBug = iosVersion && Number(iosVersion[0]) >= 9 && Number(iosVersion[1]) >= 3 && !window.indexedDB;
 
 	var transitionProp = undefined;
 	var transitionEndEvent = undefined;
@@ -503,12 +507,6 @@
 	  animationEndEvent = isWebkitAnim ? 'webkitAnimationEnd' : 'animationend';
 	}
 
-	/* istanbul ignore next */
-	function isNative(Ctor) {
-	  return (/native code/.test(Ctor.toString())
-	  );
-	}
-
 	/**
 	 * Defer a task to execute it asynchronously. Ideally this
 	 * should be executed as a microtask, so we leverage
@@ -522,55 +520,35 @@
 	var nextTick = (function () {
 	  var callbacks = [];
 	  var pending = false;
-	  var timerFunc = undefined;
-
+	  var timerFunc;
 	  function nextTickHandler() {
 	    pending = false;
 	    var copies = callbacks.slice(0);
-	    callbacks.length = 0;
+	    callbacks = [];
 	    for (var i = 0; i < copies.length; i++) {
 	      copies[i]();
 	    }
 	  }
 
-	  // the nextTick behavior leverages the microtask queue, which can be accessed
-	  // via either native Promise.then or MutationObserver.
-	  // MutationObserver has wider support, however it is seriously bugged in
-	  // UIWebView in iOS >= 9.3.3 when triggered in touch event handlers. It
-	  // completely stops working after triggering a few times... so, if native
-	  // Promise is available, we will use it:
 	  /* istanbul ignore if */
-	  if (typeof Promise !== 'undefined' && isNative(Promise)) {
-	    var p = Promise.resolve();
-	    var noop = function noop() {};
-	    timerFunc = function () {
-	      p.then(nextTickHandler);
-	      // in problematic UIWebViews, Promise.then doesn't completely break, but
-	      // it can get stuck in a weird state where callbacks are pushed into the
-	      // microtask queue but the queue isn't being flushed, until the browser
-	      // needs to do some other work, e.g. handle a timer. Therefore we can
-	      // "force" the microtask queue to be flushed by adding an empty timer.
-	      if (isIOS) setTimeout(noop);
-	    };
-	  } else if (typeof MutationObserver !== 'undefined') {
-	    // use MutationObserver where native Promise is not available,
-	    // e.g. IE11, iOS7, Android 4.4
+	  if (typeof MutationObserver !== 'undefined' && !hasMutationObserverBug) {
 	    var counter = 1;
 	    var observer = new MutationObserver(nextTickHandler);
-	    var textNode = document.createTextNode(String(counter));
+	    var textNode = document.createTextNode(counter);
 	    observer.observe(textNode, {
 	      characterData: true
 	    });
 	    timerFunc = function () {
 	      counter = (counter + 1) % 2;
-	      textNode.data = String(counter);
+	      textNode.data = counter;
 	    };
 	  } else {
-	    // fallback to setTimeout
-	    /* istanbul ignore next */
-	    timerFunc = setTimeout;
+	    // webpack attempts to inject a shim for setImmediate
+	    // if it is used as a global, so we have to work around that to
+	    // avoid bundling unnecessary code.
+	    var context = inBrowser ? window : typeof global !== 'undefined' ? global : {};
+	    timerFunc = context.setImmediate || setTimeout;
 	  }
-
 	  return function (cb, ctx) {
 	    var func = ctx ? function () {
 	      cb.call(ctx);
@@ -584,7 +562,7 @@
 
 	var _Set = undefined;
 	/* istanbul ignore if */
-	if (typeof Set !== 'undefined' && isNative(Set)) {
+	if (typeof Set !== 'undefined' && Set.toString().match(/native code/)) {
 	  // use native Set when available.
 	  _Set = Set;
 	} else {
@@ -705,6 +683,7 @@
 	};
 
 	var cache$1 = new Cache(1000);
+	var filterTokenRE = /[^\s'"]+|'[^']*'|"[^"]*"/g;
 	var reservedArgRE = /^in$|^-?\d+/;
 
 	/**
@@ -713,167 +692,35 @@
 
 	var str;
 	var dir;
-	var len;
-	var index;
-	var chr;
-	var state;
-	var startState = 0;
-	var filterState = 1;
-	var filterNameState = 2;
-	var filterArgState = 3;
-
-	var doubleChr = 0x22;
-	var singleChr = 0x27;
-	var pipeChr = 0x7C;
-	var escapeChr = 0x5C;
-	var spaceChr = 0x20;
-
-	var expStartChr = { 0x5B: 1, 0x7B: 1, 0x28: 1 };
-	var expChrPair = { 0x5B: 0x5D, 0x7B: 0x7D, 0x28: 0x29 };
-
-	function peek() {
-	  return str.charCodeAt(index + 1);
-	}
-
-	function next() {
-	  return str.charCodeAt(++index);
-	}
-
-	function eof() {
-	  return index >= len;
-	}
-
-	function eatSpace() {
-	  while (peek() === spaceChr) {
-	    next();
-	  }
-	}
-
-	function isStringStart(chr) {
-	  return chr === doubleChr || chr === singleChr;
-	}
-
-	function isExpStart(chr) {
-	  return expStartChr[chr];
-	}
-
-	function isExpEnd(start, chr) {
-	  return expChrPair[start] === chr;
-	}
-
-	function parseString() {
-	  var stringQuote = next();
-	  var chr;
-	  while (!eof()) {
-	    chr = next();
-	    // escape char
-	    if (chr === escapeChr) {
-	      next();
-	    } else if (chr === stringQuote) {
-	      break;
-	    }
-	  }
-	}
-
-	function parseSpecialExp(chr) {
-	  var inExp = 0;
-	  var startChr = chr;
-
-	  while (!eof()) {
-	    chr = peek();
-	    if (isStringStart(chr)) {
-	      parseString();
-	      continue;
-	    }
-
-	    if (startChr === chr) {
-	      inExp++;
-	    }
-	    if (isExpEnd(startChr, chr)) {
-	      inExp--;
-	    }
-
-	    next();
-
-	    if (inExp === 0) {
-	      break;
-	    }
-	  }
-	}
-
+	var c;
+	var prev;
+	var i;
+	var l;
+	var lastFilterIndex;
+	var inSingle;
+	var inDouble;
+	var curly;
+	var square;
+	var paren;
 	/**
-	 * syntax:
-	 * expression | filterName  [arg  arg [| filterName arg arg]]
+	 * Push a filter to the current directive object
 	 */
 
-	function parseExpression() {
-	  var start = index;
-	  while (!eof()) {
-	    chr = peek();
-	    if (isStringStart(chr)) {
-	      parseString();
-	    } else if (isExpStart(chr)) {
-	      parseSpecialExp(chr);
-	    } else if (chr === pipeChr) {
-	      next();
-	      chr = peek();
-	      if (chr === pipeChr) {
-	        next();
-	      } else {
-	        if (state === startState || state === filterArgState) {
-	          state = filterState;
-	        }
-	        break;
-	      }
-	    } else if (chr === spaceChr && (state === filterNameState || state === filterArgState)) {
-	      eatSpace();
-	      break;
-	    } else {
-	      if (state === filterState) {
-	        state = filterNameState;
-	      }
-	      next();
+	function pushFilter() {
+	  var exp = str.slice(lastFilterIndex, i).trim();
+	  var filter;
+	  if (exp) {
+	    filter = {};
+	    var tokens = exp.match(filterTokenRE);
+	    filter.name = tokens[0];
+	    if (tokens.length > 1) {
+	      filter.args = tokens.slice(1).map(processFilterArg);
 	    }
 	  }
-
-	  return str.slice(start + 1, index) || null;
-	}
-
-	function parseFilterList() {
-	  var filters = [];
-	  while (!eof()) {
-	    filters.push(parseFilter());
+	  if (filter) {
+	    (dir.filters = dir.filters || []).push(filter);
 	  }
-	  return filters;
-	}
-
-	function parseFilter() {
-	  var filter = {};
-	  var args;
-
-	  state = filterState;
-	  filter.name = parseExpression().trim();
-
-	  state = filterArgState;
-	  args = parseFilterArguments();
-
-	  if (args.length) {
-	    filter.args = args;
-	  }
-	  return filter;
-	}
-
-	function parseFilterArguments() {
-	  var args = [];
-	  while (!eof() && state !== filterState) {
-	    var arg = parseExpression();
-	    if (!arg) {
-	      break;
-	    }
-	    args.push(processFilterArg(arg));
-	  }
-
-	  return args;
+	  lastFilterIndex = i + 1;
 	}
 
 	/**
@@ -925,22 +772,56 @@
 
 	  // reset parser state
 	  str = s;
+	  inSingle = inDouble = false;
+	  curly = square = paren = 0;
+	  lastFilterIndex = 0;
 	  dir = {};
-	  len = str.length;
-	  index = -1;
-	  chr = '';
-	  state = startState;
 
-	  var filters;
-
-	  if (str.indexOf('|') < 0) {
-	    dir.expression = str.trim();
-	  } else {
-	    dir.expression = parseExpression().trim();
-	    filters = parseFilterList();
-	    if (filters.length) {
-	      dir.filters = filters;
+	  for (i = 0, l = str.length; i < l; i++) {
+	    prev = c;
+	    c = str.charCodeAt(i);
+	    if (inSingle) {
+	      // check single quote
+	      if (c === 0x27 && prev !== 0x5C) inSingle = !inSingle;
+	    } else if (inDouble) {
+	      // check double quote
+	      if (c === 0x22 && prev !== 0x5C) inDouble = !inDouble;
+	    } else if (c === 0x7C && // pipe
+	    str.charCodeAt(i + 1) !== 0x7C && str.charCodeAt(i - 1) !== 0x7C) {
+	      if (dir.expression == null) {
+	        // first filter, end of expression
+	        lastFilterIndex = i + 1;
+	        dir.expression = str.slice(0, i).trim();
+	      } else {
+	        // already has filter
+	        pushFilter();
+	      }
+	    } else {
+	      switch (c) {
+	        case 0x22:
+	          inDouble = true;break; // "
+	        case 0x27:
+	          inSingle = true;break; // '
+	        case 0x28:
+	          paren++;break; // (
+	        case 0x29:
+	          paren--;break; // )
+	        case 0x5B:
+	          square++;break; // [
+	        case 0x5D:
+	          square--;break; // ]
+	        case 0x7B:
+	          curly++;break; // {
+	        case 0x7D:
+	          curly--;break; // }
+	      }
 	    }
+	  }
+
+	  if (dir.expression == null) {
+	    dir.expression = str.slice(0, i).trim();
+	  } else if (lastFilterIndex !== 0) {
+	    pushFilter();
 	  }
 
 	  cache$1.put(s, dir);
@@ -2529,7 +2410,10 @@
 		isIE: isIE,
 		isIE9: isIE9,
 		isAndroid: isAndroid,
-		isIOS: isIOS,
+		isIos: isIos,
+		iosVersionMatch: iosVersionMatch,
+		iosVersion: iosVersion,
+		hasMutationObserverBug: hasMutationObserverBug,
 		get transitionProp () { return transitionProp; },
 		get transitionEndEvent () { return transitionEndEvent; },
 		get animationProp () { return animationProp; },
@@ -2629,7 +2513,7 @@
 
 	    // fragment:
 	    // if this instance is compiled inside a Fragment, it
-	    // needs to register itself as a child of that fragment
+	    // needs to reigster itself as a child of that fragment
 	    // for attach/detach to work properly.
 	    this._frag = options._frag;
 	    if (this._frag) {
@@ -2934,7 +2818,7 @@
 	 */
 
 	function getPath(obj, path) {
-	  return parseExpression$1(path).get(obj);
+	  return parseExpression(path).get(obj);
 	}
 
 	/**
@@ -2969,7 +2853,7 @@
 	    last = obj;
 	    key = path[i];
 	    if (key.charAt(0) === '*') {
-	      key = parseExpression$1(key.slice(1)).get.call(original, original);
+	      key = parseExpression(key.slice(1)).get.call(original, original);
 	    }
 	    if (i < l - 1) {
 	      obj = obj[key];
@@ -3013,7 +2897,7 @@
 
 	var wsRE = /\s/g;
 	var newlineRE = /\n/g;
-	var saveRE = /[\{,]\s*[\w\$_]+\s*:|('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\"']|\\.)*`|`(?:[^`\\]|\\.)*`)|new |typeof |void /g;
+	var saveRE = /[\{,]\s*[\w\$_]+\s*:|('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\]|\\.)*`|`(?:[^`\\]|\\.)*`)|new |typeof |void /g;
 	var restoreRE = /"(\d+)"/g;
 	var pathTestRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['.*?'\]|\[".*?"\]|\[\d+\]|\[[A-Za-z_$][\w$]*\])*$/;
 	var identRE = /[^\w$\.](?:[A-Za-z_$][\w$]*)/g;
@@ -3160,7 +3044,7 @@
 	 * @return {Function}
 	 */
 
-	function parseExpression$1(exp, needSet) {
+	function parseExpression(exp, needSet) {
 	  exp = exp.trim();
 	  // try cache
 	  var hit = expressionCache.get(exp);
@@ -3199,7 +3083,7 @@
 	}
 
 	var expression = Object.freeze({
-	  parseExpression: parseExpression$1,
+	  parseExpression: parseExpression,
 	  isSimplePath: isSimplePath
 	});
 
@@ -3351,7 +3235,7 @@
 	    this.getter = expOrFn;
 	    this.setter = undefined;
 	  } else {
-	    var res = parseExpression$1(expOrFn, this.twoWay);
+	    var res = parseExpression(expOrFn, this.twoWay);
 	    this.getter = res.get;
 	    this.setter = res.set;
 	  }
@@ -4195,10 +4079,6 @@
 	  params: ['track-by', 'stagger', 'enter-stagger', 'leave-stagger'],
 
 	  bind: function bind() {
-	    if (process.env.NODE_ENV !== 'production' && this.el.hasAttribute('v-if')) {
-	      warn('<' + this.el.tagName.toLowerCase() + ' v-for="' + this.expression + '" v-if="' + this.el.getAttribute('v-if') + '">: ' + 'Using v-if and v-for on the same element is not recommended - ' + 'consider filtering the source Array instead.', this.vm);
-	    }
-
 	    // support "item in/of items" syntax
 	    var inMatch = this.expression.match(/(.*) (?:in|of) (.*)/);
 	    if (inMatch) {
@@ -4309,7 +4189,7 @@
 	          });
 	        }
 	      } else {
-	        // new instance
+	        // new isntance
 	        frag = this.create(value, alias, i, key);
 	        frag.fresh = !init;
 	      }
@@ -4744,6 +4624,24 @@
 	}
 
 	/**
+	 * Find a vm from a fragment.
+	 *
+	 * @param {Fragment} frag
+	 * @return {Vue|undefined}
+	 */
+
+	function findVmFromFrag(frag) {
+	  var node = frag.node;
+	  // handle multi-node frag
+	  if (frag.end) {
+	    while (!node.__vue__ && node !== frag.end && node.nextSibling) {
+	      node = node.nextSibling;
+	    }
+	  }
+	  return node.__vue__;
+	}
+
+	/**
 	 * Create a range array from given number.
 	 *
 	 * @param {Number} n
@@ -4776,24 +4674,6 @@
 	  vFor.warnDuplicate = function (value) {
 	    warn('Duplicate value found in v-for="' + this.descriptor.raw + '": ' + JSON.stringify(value) + '. Use track-by="$index" if ' + 'you are expecting duplicate values.', this.vm);
 	  };
-	}
-
-	/**
-	 * Find a vm from a fragment.
-	 *
-	 * @param {Fragment} frag
-	 * @return {Vue|undefined}
-	 */
-
-	function findVmFromFrag(frag) {
-	  var node = frag.node;
-	  // handle multi-node frag
-	  if (frag.end) {
-	    while (!node.__vue__ && node !== frag.end && node.nextSibling) {
-	      node = node.nextSibling;
-	    }
-	  }
-	  return node.__vue__;
 	}
 
 	var vIf = {
@@ -5193,16 +5073,15 @@
 	    }
 
 	    this.listener = function () {
-	      var model = self._watcher.get();
+	      var model = self._watcher.value;
 	      if (isArray(model)) {
 	        var val = self.getValue();
-	        var i = indexOf(model, val);
 	        if (el.checked) {
-	          if (i < 0) {
-	            self.set(model.concat(val));
+	          if (indexOf(model, val) < 0) {
+	            model.push(val);
 	          }
-	        } else if (i > -1) {
-	          self.set(model.slice(0, i).concat(model.slice(i + 1)));
+	        } else {
+	          model.$remove(val);
 	        }
 	      } else {
 	        self.set(getBooleanValue());
@@ -5719,12 +5598,6 @@
 	  }
 	};
 
-	// logic control
-	// two-way binding
-	// event handling
-	// attributes
-	// ref & el
-	// cloak
 	// must export plain object
 	var directives = {
 	  text: text$1,
@@ -6216,7 +6089,6 @@
 
 	function compileProps(el, propOptions, vm) {
 	  var props = [];
-	  var propsData = vm.$options.propsData;
 	  var names = Object.keys(propOptions);
 	  var i = names.length;
 	  var options, name, attr, value, path, parsed, prop;
@@ -6284,16 +6156,13 @@
 	    } else if ((value = getAttr(el, attr)) !== null) {
 	      // has literal binding!
 	      prop.raw = value;
-	    } else if (propsData && (value = propsData[name] || propsData[path]) !== null) {
-	      // has propsData
-	      prop.raw = value;
 	    } else if (process.env.NODE_ENV !== 'production') {
 	      // check possible camelCase prop usage
 	      var lowerCaseName = path.toLowerCase();
 	      value = /[A-Z\-]/.test(name) && (el.getAttribute(lowerCaseName) || el.getAttribute(':' + lowerCaseName) || el.getAttribute('v-bind:' + lowerCaseName) || el.getAttribute(':' + lowerCaseName + '.once') || el.getAttribute('v-bind:' + lowerCaseName + '.once') || el.getAttribute(':' + lowerCaseName + '.sync') || el.getAttribute('v-bind:' + lowerCaseName + '.sync'));
 	      if (value) {
 	        warn('Possible usage error for prop `' + lowerCaseName + '` - ' + 'did you mean `' + attr + '`? HTML is case-insensitive, remember to use ' + 'kebab-case for props in templates.', vm);
-	      } else if (options.required && (!propsData || !(name in propsData) && !(path in propsData))) {
+	      } else if (options.required) {
 	        // warn missing required
 	        warn('Missing required prop: ' + name, vm);
 	      }
@@ -7138,7 +7007,7 @@
 	  var originalDirCount = vm._directives.length;
 	  linker();
 	  var dirs = vm._directives.slice(originalDirCount);
-	  sortDirectives(dirs);
+	  dirs.sort(directiveComparator);
 	  for (var i = 0, l = dirs.length; i < l; i++) {
 	    dirs[i]._bind();
 	  }
@@ -7146,37 +7015,16 @@
 	}
 
 	/**
-	 * sort directives by priority (stable sort)
+	 * Directive priority sort comparator
 	 *
-	 * @param {Array} dirs
+	 * @param {Object} a
+	 * @param {Object} b
 	 */
-	function sortDirectives(dirs) {
-	  if (dirs.length === 0) return;
 
-	  var groupedMap = {};
-	  var i, j, k, l;
-	  var index = 0;
-	  var priorities = [];
-	  for (i = 0, j = dirs.length; i < j; i++) {
-	    var dir = dirs[i];
-	    var priority = dir.descriptor.def.priority || DEFAULT_PRIORITY;
-	    var array = groupedMap[priority];
-	    if (!array) {
-	      array = groupedMap[priority] = [];
-	      priorities.push(priority);
-	    }
-	    array.push(dir);
-	  }
-
-	  priorities.sort(function (a, b) {
-	    return a > b ? -1 : a === b ? 0 : 1;
-	  });
-	  for (i = 0, j = priorities.length; i < j; i++) {
-	    var group = groupedMap[priorities[i]];
-	    for (k = 0, l = group.length; k < l; k++) {
-	      dirs[index++] = group[k];
-	    }
-	  }
+	function directiveComparator(a, b) {
+	  a = a.descriptor.def.priority || DEFAULT_PRIORITY;
+	  b = b.descriptor.def.priority || DEFAULT_PRIORITY;
+	  return a > b ? -1 : a === b ? 0 : 1;
 	}
 
 	/**
@@ -7294,13 +7142,7 @@
 	    });
 	    if (names.length) {
 	      var plural = names.length > 1;
-
-	      var componentName = options.el.tagName.toLowerCase();
-	      if (componentName === 'component' && options.name) {
-	        componentName += ':' + options.name;
-	      }
-
-	      warn('Attribute' + (plural ? 's ' : ' ') + names.join(', ') + (plural ? ' are' : ' is') + ' ignored on component ' + '<' + componentName + '> because ' + 'the component is a fragment instance: ' + 'http://vuejs.org/guide/components.html#Fragment-Instance');
+	      warn('Attribute' + (plural ? 's ' : ' ') + names.join(', ') + (plural ? ' are' : ' is') + ' ignored on component ' + '<' + options.el.tagName.toLowerCase() + '> because ' + 'the component is a fragment instance: ' + 'http://vuejs.org/guide/components.html#Fragment-Instance');
 	    }
 	  }
 
@@ -7359,10 +7201,6 @@
 	  // textarea treats its text content as the initial value.
 	  // just bind it as an attr directive for value.
 	  if (el.tagName === 'TEXTAREA') {
-	    // a textarea which has v-pre attr should skip complie.
-	    if (getAttr(el, 'v-pre') !== null) {
-	      return skip;
-	    }
 	    var tokens = parseText(el.value);
 	    if (tokens) {
 	      el.setAttribute(':value', tokensToExp(tokens));
@@ -7689,7 +7527,7 @@
 	    modifiers: modifiers,
 	    def: def
 	  };
-	  // check ref for v-for, v-if and router-view
+	  // check ref for v-for and router-view
 	  if (dirName === 'for' || dirName === 'router-view') {
 	    descriptor.ref = findRef(el);
 	  }
@@ -7929,9 +7767,6 @@
 	  var frag = parseTemplate(template, true);
 	  if (frag) {
 	    var replacer = frag.firstChild;
-	    if (!replacer) {
-	      return frag;
-	    }
 	    var tag = replacer.tagName && replacer.tagName.toLowerCase();
 	    if (options.replace) {
 	      /* istanbul ignore if */
@@ -8684,7 +8519,7 @@
 	Directive.prototype._checkStatement = function () {
 	  var expression = this.expression;
 	  if (expression && this.acceptStatement && !isSimplePath(expression)) {
-	    var fn = parseExpression$1(expression).get;
+	    var fn = parseExpression(expression).get;
 	    var scope = this._scope || this.vm;
 	    var handler = function handler(e) {
 	      scope.$event = e;
@@ -9132,7 +8967,7 @@
 	   */
 
 	  Vue.prototype.$get = function (exp, asStatement) {
-	    var res = parseExpression$1(exp);
+	    var res = parseExpression(exp);
 	    if (res) {
 	      if (asStatement) {
 	        var self = this;
@@ -9160,7 +8995,7 @@
 	   */
 
 	  Vue.prototype.$set = function (exp, val) {
-	    var res = parseExpression$1(exp, true);
+	    var res = parseExpression(exp, true);
 	    if (res && res.set) {
 	      res.set.call(this, this, val);
 	    }
@@ -9923,7 +9758,7 @@
 	}
 
 	/**
-	 * Order filter for arrays
+	 * Filter filter for arrays
 	 *
 	 * @param {String|Array<String>|Function} ...sortKeys
 	 * @param {Number} [order]
@@ -10306,7 +10141,7 @@
 
 	installGlobalAPI(Vue);
 
-	Vue.version = '1.0.28';
+	Vue.version = '1.0.26';
 
 	// devtools global hook
 	/* istanbul ignore next */
@@ -10321,13 +10156,14 @@
 	}, 0);
 
 	module.exports = Vue;
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(2)))
 
 /***/ },
 /* 2 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
+
 	var process = module.exports = {};
 
 	// cached from whatever global is present so that test runners that stub it
@@ -10338,84 +10174,22 @@
 	var cachedSetTimeout;
 	var cachedClearTimeout;
 
-	function defaultSetTimout() {
-	    throw new Error('setTimeout has not been defined');
-	}
-	function defaultClearTimeout () {
-	    throw new Error('clearTimeout has not been defined');
-	}
 	(function () {
-	    try {
-	        if (typeof setTimeout === 'function') {
-	            cachedSetTimeout = setTimeout;
-	        } else {
-	            cachedSetTimeout = defaultSetTimout;
-	        }
-	    } catch (e) {
-	        cachedSetTimeout = defaultSetTimout;
+	  try {
+	    cachedSetTimeout = setTimeout;
+	  } catch (e) {
+	    cachedSetTimeout = function () {
+	      throw new Error('setTimeout is not defined');
 	    }
-	    try {
-	        if (typeof clearTimeout === 'function') {
-	            cachedClearTimeout = clearTimeout;
-	        } else {
-	            cachedClearTimeout = defaultClearTimeout;
-	        }
-	    } catch (e) {
-	        cachedClearTimeout = defaultClearTimeout;
+	  }
+	  try {
+	    cachedClearTimeout = clearTimeout;
+	  } catch (e) {
+	    cachedClearTimeout = function () {
+	      throw new Error('clearTimeout is not defined');
 	    }
+	  }
 	} ())
-	function runTimeout(fun) {
-	    if (cachedSetTimeout === setTimeout) {
-	        //normal enviroments in sane situations
-	        return setTimeout(fun, 0);
-	    }
-	    // if setTimeout wasn't available but was latter defined
-	    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-	        cachedSetTimeout = setTimeout;
-	        return setTimeout(fun, 0);
-	    }
-	    try {
-	        // when when somebody has screwed with setTimeout but no I.E. maddness
-	        return cachedSetTimeout(fun, 0);
-	    } catch(e){
-	        try {
-	            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-	            return cachedSetTimeout.call(null, fun, 0);
-	        } catch(e){
-	            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-	            return cachedSetTimeout.call(this, fun, 0);
-	        }
-	    }
-
-
-	}
-	function runClearTimeout(marker) {
-	    if (cachedClearTimeout === clearTimeout) {
-	        //normal enviroments in sane situations
-	        return clearTimeout(marker);
-	    }
-	    // if clearTimeout wasn't available but was latter defined
-	    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-	        cachedClearTimeout = clearTimeout;
-	        return clearTimeout(marker);
-	    }
-	    try {
-	        // when when somebody has screwed with setTimeout but no I.E. maddness
-	        return cachedClearTimeout(marker);
-	    } catch (e){
-	        try {
-	            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-	            return cachedClearTimeout.call(null, marker);
-	        } catch (e){
-	            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-	            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-	            return cachedClearTimeout.call(this, marker);
-	        }
-	    }
-
-
-
-	}
 	var queue = [];
 	var draining = false;
 	var currentQueue;
@@ -10440,7 +10214,7 @@
 	    if (draining) {
 	        return;
 	    }
-	    var timeout = runTimeout(cleanUpNextTick);
+	    var timeout = cachedSetTimeout(cleanUpNextTick);
 	    draining = true;
 
 	    var len = queue.length;
@@ -10457,7 +10231,7 @@
 	    }
 	    currentQueue = null;
 	    draining = false;
-	    runClearTimeout(timeout);
+	    cachedClearTimeout(timeout);
 	}
 
 	process.nextTick = function (fun) {
@@ -10469,7 +10243,7 @@
 	    }
 	    queue.push(new Item(fun, args));
 	    if (queue.length === 1 && !draining) {
-	        runTimeout(drainQueue);
+	        cachedSetTimeout(drainQueue, 0);
 	    }
 	};
 
@@ -13286,7 +13060,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__webpack_require__(6)
 	__vue_script__ = __webpack_require__(10)
 	if (__vue_script__ &&
@@ -13296,20 +13069,14 @@
 	__vue_template__ = __webpack_require__(43)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-04b391f6/Index.vue"
+	  var id = "_v-0d9a9491/Index.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -13352,7 +13119,7 @@
 
 
 	// module
-	exports.push([module.id, "@charset \"UTF-8\";\n/** 设置字体颜色、背景和边框颜色 **/\n/** 设置字体的大小 **/\n/** 字体大小 **/\n.size20 {\n  font-size: 0.2rem; }\n\n.size22 {\n  font-size: 0.22rem; }\n\n.size24 {\n  font-size: 0.24rem; }\n\n.size26 {\n  font-size: 0.26rem; }\n\n.size28 {\n  font-size: 0.28rem; }\n\n.size30 {\n  font-size: 0.3rem; }\n\n.size32 {\n  font-size: 0.32rem; }\n\n.size34 {\n  font-size: 0.34rem; }\n\n.size36 {\n  font-size: 0.36rem; }\n\n.size38 {\n  font-size: 0.38rem; }\n\n.size40 {\n  font-size: 0.4rem; }\n\n.size42 {\n  font-size: 0.42rem; }\n\n.size44 {\n  font-size: 0.44rem; }\n\n.size46 {\n  font-size: 0.46rem; }\n\n.size48 {\n  font-size: 0.48rem; }\n\n.size50 {\n  font-size: 0.5rem; }\n\n.size52 {\n  font-size: 0.52rem; }\n\n.size54 {\n  font-size: 0.54rem; }\n\n.size56 {\n  font-size: 0.56rem; }\n\n.size58 {\n  font-size: 0.58rem; }\n\n.size60 {\n  font-size: 0.6rem; }\n\n.size80 {\n  font-size: 0.8rem !important; }\n\n/** ======== 1淘宝 2京东 3kickstarter 4indiegogo 5众筹网 6点名时间 7苏宁 8追梦 9青橘 10凤凰 11创客星球 12九九 13平安 更多 **/\n/** 平台字体颜色 **/\n.color0 {\n  color: #bebebe !important; }\n\n.color1 {\n  color: #f8cb00 !important; }\n\n.color2 {\n  color: #f3565d !important; }\n\n.color3 {\n  color: #45b7af !important; }\n\n.color4 {\n  color: #f9aaae !important; }\n\n.color5 {\n  color: #58A7DA !important; }\n\n.color6 {\n  color: #C8D220 !important; }\n\n.color7 {\n  color: #5BC0FF !important; }\n\n.color8 {\n  color: #5BADFC !important; }\n\n.color9 {\n  color: #A4D653 !important; }\n\n.color10 {\n  color: #FF7E45 !important; }\n\n.color11 {\n  color: #F778B3 !important; }\n\n.color12 {\n  color: #F9B85B !important; }\n\n.color13 {\n  color: #74EA7E !important; }\n\n/** 平台字体颜色 **/\n/** 平台背景颜色 **/\n.bg0 {\n  background-color: #bebebe !important;\n  border-color: #bebebe !important; }\n\n.bg1 {\n  background-color: #f8cb00 !important;\n  border-color: #f8cb00 !important; }\n\n.bg2 {\n  background-color: #f3565d !important;\n  border-color: #f3565d !important; }\n\n.bg3 {\n  background-color: #45b7af !important;\n  border-color: #45b7af !important; }\n\n.bg4 {\n  background-color: #f9aaae !important;\n  border-color: #f9aaae !important; }\n\n.bg5 {\n  background-color: #58A7DA !important;\n  border-color: #58A7DA !important; }\n\n.bg6 {\n  background-color: #C8D220 !important;\n  border-color: #C8D220 !important; }\n\n.bg7 {\n  background-color: #5BC0FF !important;\n  border-color: #5BC0FF !important; }\n\n.bg8 {\n  background-color: #5BADFC !important;\n  border-color: #5BADFC !important; }\n\n.bg9 {\n  background-color: #A4D653 !important;\n  border-color: #A4D653 !important; }\n\n.bg10 {\n  background-color: #FF7E45 !important;\n  border-color: #FF7E45 !important; }\n\n.bg11 {\n  background-color: #F778B3 !important;\n  border-color: #F778B3 !important; }\n\n.bg12 {\n  background-color: #F9B85B !important;\n  border-color: #F9B85B !important; }\n\n.bg13 {\n  background-color: #74EA7E !important;\n  border-color: #74EA7E !important; }\n\n/** 平台背景颜色 **/\n/** 平台比较字体颜色 **/\n.fcolor0 {\n  color: #bebebe !important; }\n\n.fcolor1 {\n  color: #65c3df !important; }\n\n.fcolor2 {\n  color: #b2e1ef !important; }\n\n.fcolor3 {\n  color: #d9d9d9 !important; }\n\n/** 平台比较字体颜色 **/\n/** 平台比较排名背景颜色 **/\n.bgcolor0 {\n  background-color: #bebebe !important;\n  border-color: #bebebe !important; }\n\n.bgcolor1 {\n  background-color: #65c3df !important;\n  border-color: #65c3df !important; }\n\n.bgcolor2 {\n  background-color: #b2e1ef !important;\n  border-color: #b2e1ef !important; }\n\n.bgcolor3 {\n  background-color: #d9d9d9 !important;\n  border-color: #d9d9d9 !important; }\n\n.bgcolor4 {\n  color: #999 !important;\n  border: 1px solid #999 !important;\n  font-size: 0.2rem !important;\n  background-color: transparent !important; }\n\n/** 平台比较排名背景颜色 **/\n/** funding style **/\n.fStyle0 {\n  background-color: #bebebe !important;\n  border-color: #bebebe !important; }\n\n.fStyle1 {\n  background-color: #2380be !important;\n  border-color: #2380be !important; }\n\n.fStyle2 {\n  background-color: #f3565d !important;\n  border-color: #f3565d !important; }\n\n.fStyle3 {\n  background-color: #45b7af !important;\n  border-color: #45b7af !important; }\n\n.fStyle4 {\n  background-color: #999 !important;\n  border-color: #999 !important; }\n\n.fStyle0 {\n  background-color: #f9aaae !important;\n  border-color: #f9aaae !important; }\n\n/** funding style **/\n/** 金币字体颜色 start **/\n.moneyLight {\n  color: red !important; }\n\n/** 金币字体颜色 end **/\n/**以前的平台页**/\n.blue1 {\n  background-color: #c0e5f1 !important; }\n\n.blue2 {\n  background-color: #81cce3 !important; }\n\n.fblue1 {\n  color: #c0e5f1 !important; }\n\n.fblue2 {\n  color: #81cce3 !important; }\n\n.red1 {\n  background-color: #f9aaae !important; }\n\n.red2 {\n  background-color: #f3565d !important; }\n\n.fred1 {\n  color: #f9aaae !important; }\n\n.fred2 {\n  color: #f3565d !important; }\n\n.green1 {\n  background-color: #a2dbd7 !important; }\n\n.green2 {\n  background-color: #45b7af !important; }\n\n.fgreen1 {\n  color: #a2dbd7 !important; }\n\n.fgreen2 {\n  color: #45b7af !important; }\n\n.yellow1 {\n  background-color: #fbe57f !important; }\n\n.yellow2 {\n  background-color: #f8cb00 !important; }\n\n.fyellow1 {\n  color: #fbe57f !important; }\n\n.fyellow2 {\n  color: #f8cb00 !important; }\n\n/**以前的平台页**/\n/** input **/\ninput::-webkit-search-cancel-button {\n  display: none; }\n\n/** clear float **/\n.clearfix:after {\n  content: \"\";\n  display: block;\n  height: 0;\n  visibility: hidden;\n  clear: both; }\n\n/** visiable **/\n.show {\n  display: block !important; }\n\n.hide {\n  display: none !important; }\n\n/** float **/\n.fl {\n  float: left; }\n\n.fr {\n  float: right; }\n\nhtml, body {\n  font-size: 100px;\n  font-family: 'microsoft yahei';\n  height: 100%;\n  background-color: #e5e5e5; }\n\n@media (max-width: 320px) {\n  html, body {\n    font-size: 42.6667px; } }\n\n@media (max-width: 375px) {\n  html, body {\n    font-size: 50px; } }\n\n@media (max-width: 414px) {\n  html, body {\n    font-size: 55.2px; } }\n\n#hideForm {\n  display: none; }\n\n/** gkvBox **/\n#gkvBox {\n  font-size: 0.3rem;\n  width: 100%;\n  background-color: #e5e5e5;\n  position: relative;\n  max-width: 7.5rem;\n  margin: auto; }\n\n/** person center main block start **/\n.pnc__main {\n  display: block;\n  width: 1rem;\n  text-align: center;\n  height: 0.96rem;\n  line-height: 1rem; }\n\n.pnc__mainLink {\n  color: #fff; }\n\n.pnc__main .icon {\n  font-size: 0.4rem; }\n\n/** person center main block end **/\n/** gkvMaskBox block start **/\n#gkvMaskBox {\n  width: 100%;\n  height: 5.94rem;\n  position: fixed;\n  bottom: 0rem;\n  left: 0rem;\n  right: 0rem;\n  background-color: #fff;\n  z-index: 999;\n  border-top: 1px solid #d7d7d7;\n  max-width: 7.68rem;\n  margin: auto; }\n\n.container {\n  padding: 0rem 0.3rem;\n  box-sizing: border-box; }\n\n.maskWrap {\n  width: 100%;\n  height: 100%; }\n\n.mask__opt {\n  background-color: #e5e5e5;\n  width: 100%;\n  height: 0.8rem;\n  padding: 0.11rem 0.3rem;\n  box-sizing: border-box; }\n\n.mask__btn {\n  display: block;\n  width: 1rem;\n  height: 0.56rem;\n  text-align: center;\n  line-height: 0.56rem;\n  color: #555;\n  font-size: 0.25rem; }\n\n.mask__btn .icon {\n  font-size: 0.3rem; }\n\n.mask__cancel {\n  border-radius: 999px;\n  border: 1px solid #c9c9c9;\n  box-sizing: border-box; }\n\n.mask__panel {\n  padding: 0.2rem;\n  box-sizing: border-box;\n  width: 100%;\n  height: 5.14rem;\n  background-color: #fff; }\n\n.mask__links {\n  margin: 0rem 0.1rem 0.3rem;\n  border: 1px solid #d8d8d8;\n  border-radius: 999px;\n  height: 0.6rem;\n  padding: 0rem 0.13rem;\n  box-sizing: border-box; }\n\n.mask__linkTxt {\n  color: #555;\n  display: block;\n  width: 100%;\n  line-height: 0.56rem;\n  height: 0.56rem;\n  font-size: 0.25rem; }\n\n.mask__website .mask__linkTxt,\n.mask__more .mask__linkTxt {\n  color: #fff; }\n\n.mask__firstRow {\n  margin: 0rem 0.05rem 0.3rem !important; }\n\n.mask__firstRow:first-child {\n  margin: 0rem 0.1rem 0.3rem !important; }\n\n.mask__K {\n  background-color: #7ac13f;\n  border: 1px solid #7ac13f; }\n\n.mask__Go {\n  background-color: #ec0d77;\n  border: 1px solid #ec0d77; }\n\n.mask__Tao {\n  background-color: #d7233c;\n  border: 1px solid #d7233c; }\n\n.mask__JD {\n  background-color: #fd6804;\n  border: 1px solid #fd6804; }\n\n.mask__all {\n  background-color: #2280be;\n  border: 1px solid #2280be; }\n\n/** gkvMaskBox block end **/\n/** gkvMaskAllBox block start **/\n.gkvMaskAllBox {\n  position: fixed;\n  max-width: 7.5rem;\n  top: 0;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  background-color: #fff;\n  margin: auto;\n  z-index: 99999; }\n\n.mask__allPfTitle {\n  height: 0.96rem;\n  line-height: 0.96rem;\n  text-align: center;\n  border-bottom: 1px solid #ddd; }\n\n.mask__allPfBox {\n  padding-top: 0.4rem;\n  height: 4.65rem; }\n\n.mask__allCateTitle {\n  margin: 0 0.3rem;\n  box-sizing: border-box;\n  border-bottom: 1px solid #ddd;\n  color: #666; }\n\n.mask__allCateBox {\n  padding-top: 0.4rem; }\n\n.mask__allReturn {\n  position: absolute;\n  width: 0.96rem;\n  left: 0rem;\n  height: 0.96rem;\n  line-height: 0.96rem;\n  text-align: center;\n  color: #999; }\n\n/** gkvMaskAllBox block end **/\n/** gkvSearch block start **/\n#gkvSearch {\n  width: 100%;\n  height: 100%;\n  position: fixed;\n  z-index: 9999;\n  top: 0rem;\n  right: 0rem;\n  left: 0rem;\n  max-width: 7.68rem;\n  margin: auto; }\n\n#gkvSearch.searchPage {\n  position: static; }\n\n.searchBox {\n  width: 100%;\n  padding: 0.18rem 0.3rem;\n  background-color: #fff;\n  box-sizing: border-box;\n  height: 0.96rem;\n  line-height: 0.56rem; }\n\n.search__InptBox {\n  position: relative; }\n\n.search__InptBox .searchIcon {\n  position: absolute;\n  font-size: 0.40rem;\n  top: 50%;\n  left: 0.2rem;\n  line-height: 0.40rem;\n  margin-top: -0.2rem;\n  color: #999; }\n\n.search__Inpt {\n  width: 5.4rem;\n  height: 0.58rem;\n  background-color: #e5e5e5;\n  border: 1px solid #e5e5e5;\n  border-radius: 999px;\n  padding-left: 0.7rem;\n  padding-right: 0.6rem;\n  box-sizing: border-box;\n  outline: none; }\n\n.search__clear {\n  position: absolute;\n  right: 0.1rem;\n  top: -0.02rem;\n  display: block;\n  font-size: 1rem;\n  width: 0.6rem;\n  height: 0.6rem;\n  line-height: 0rem;\n  text-align: center;\n  color: #999; }\n\n.search__clear .icon {\n  font-size: 0.3rem; }\n\n.search__return {\n  width: 0.7rem;\n  text-align: left;\n  color: #aaa;\n  height: 0.6rem; }\n\n.search__return .icon {\n  font-size: 0.4rem;\n  line-height: 0.4rem; }\n\n.search__search {\n  width: 0.8rem;\n  text-align: right;\n  color: #555; }\n\n.search__title {\n  color: #555;\n  height: 0.58rem;\n  line-height: 0.58rem;\n  text-indent: 0.3rem;\n  background-color: #fff; }\n\n.search__title.search__searchTitle {\n  border-top: 1px solid #ddd;\n  border-bottom: 1px solid #ddd;\n  text-indent: 0.3rem;\n  color: #999;\n  background-color: #fff; }\n\n.search__results {\n  height: 100%;\n  background-color: #fff; }\n\n/** gkvSearch block end **/\n/** qrCodeBox start **/\n.pnc__qrCodeBox {\n  position: fixed;\n  top: 0;\n  bottom: 0;\n  right: 0;\n  left: 0;\n  background-color: rgba(0, 0, 0, 0.7);\n  max-width: 7.5rem;\n  margin: auto; }\n\n.pnc__qrTitle {\n  width: 100%;\n  color: #fff;\n  text-align: center;\n  margin-top: 2.5rem;\n  font-size: 0.4rem; }\n\n.pnc__qrCode {\n  width: 4rem;\n  height: 4rem;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/personPage/gkvplus_qr.jpg\");\n  background-size: cover;\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  margin: -2rem 0 0 -2rem; }\n\n.pnc__closeBox {\n  position: absolute;\n  top: 0;\n  right: 0;\n  width: 1.2rem;\n  height: 1.2rem;\n  box-sizing: border-box;\n  padding: 0.4rem 0.5rem 0 0;\n  text-align: right; }\n\n.pnc__closeBox .icon {\n  color: #fff; }\n\n/** qrCodeBox start **/\n/** gkvFooter block start **/\n#gkvFooter {\n  padding: 0.3rem 0.5rem;\n  color: #fff;\n  height: 1.15rem;\n  background-color: #959595;\n  box-sizing: border-box; }\n\n.gkv__CopyBox {\n  height: 0.5rem;\n  line-height: 0.5rem; }\n\n.gkv__CopyDown {\n  margin-top: 0.06rem;\n  height: 0.24rem;\n  line-height: 0.24rem; }\n\n.gkv__aboutMeLink {\n  display: block;\n  width: 1.6rem;\n  height: 0.5rem;\n  color: #fff;\n  border-radius: 999px;\n  line-height: 0.5rem;\n  text-align: right;\n  padding-right: 0.2rem; }\n\n.gkv__feekback {\n  width: 0.22rem;\n  height: 0.22rem;\n  vertical-align: middle;\n  padding-right: 0.1rem; }\n\n/** gkvFooter block end **/\n/** loading block start **/\n.pacman > div:first-of-type, .pacman > div:nth-child(2) {\n  width: 0;\n  height: 0;\n  border-right: 0.5rem solid transparent;\n  border-top: 0.5rem solid #65c3df;\n  border-left: 0.5rem solid #65c3df;\n  border-bottom: 0.5rem solid #65c3df;\n  border-radius: 0.5rem; }\n\n@-webkit-keyframes rotate_pacman_half_up {\n  0%, 100% {\n    -webkit-transform: rotate(270deg);\n    transform: rotate(270deg); }\n  50% {\n    -webkit-transform: rotate(360deg);\n    transform: rotate(360deg); } }\n\n@keyframes rotate_pacman_half_up {\n  0%, 100% {\n    -webkit-transform: rotate(270deg);\n    transform: rotate(270deg); }\n  50% {\n    -webkit-transform: rotate(360deg);\n    transform: rotate(360deg); } }\n\n@-webkit-keyframes rotate_pacman_half_down {\n  0%, 100% {\n    -webkit-transform: rotate(90deg);\n    transform: rotate(90deg); }\n  50% {\n    -webkit-transform: rotate(0);\n    transform: rotate(0); } }\n\n@keyframes rotate_pacman_half_down {\n  0%, 100% {\n    -webkit-transform: rotate(90deg);\n    transform: rotate(90deg); }\n  50% {\n    -webkit-transform: rotate(0);\n    transform: rotate(0); } }\n\n@-webkit-keyframes pacman-balls {\n  75% {\n    opacity: .7; }\n  100% {\n    -webkit-transform: translate(-1rem, -0.0625rem);\n    transform: translate(-1rem, -0.0625rem); } }\n\n@keyframes pacman-balls {\n  75% {\n    opacity: .7; }\n  100% {\n    -webkit-transform: translate(-1rem, -0.0625rem);\n    transform: translate(-1rem, -0.0625rem); } }\n\n.pacman {\n  position: relative; }\n\n.pacman > div:nth-child(3) {\n  -webkit-animation: pacman-balls 1s 0s infinite linear;\n  animation: pacman-balls 1s 0s infinite linear; }\n\n.pacman > div:nth-child(4) {\n  -webkit-animation: pacman-balls 1s .33s infinite linear;\n  animation: pacman-balls 1s .33s infinite linear; }\n\n.pacman > div:nth-child(5) {\n  -webkit-animation: pacman-balls 1s .66s infinite linear;\n  animation: pacman-balls 1s .66s infinite linear; }\n\n.pacman > div:first-of-type {\n  -webkit-animation: rotate_pacman_half_up .5s 0s infinite;\n  animation: rotate_pacman_half_up .5s 0s infinite; }\n\n.pacman > div:nth-child(2) {\n  -webkit-animation: rotate_pacman_half_down .5s 0s infinite;\n  animation: rotate_pacman_half_down .5s 0s infinite;\n  margin-top: -1rem; }\n\n.pacman > div:nth-child(3), .pacman > div:nth-child(4), .pacman > div:nth-child(5), .pacman > div:nth-child(6) {\n  background-color: #65c3df;\n  border-radius: 100%;\n  margin: 0.2rem;\n  width: 0.2rem;\n  height: 0.2rem;\n  position: absolute;\n  -webkit-transform: translate(0, -0.0625rem);\n  transform: translate(0, -0.0625rem);\n  top: 0.25rem;\n  left: 1.4rem; }\n\n#loading {\n  position: absolute;\n  width: 1rem;\n  height: 1rem;\n  top: 2rem;\n  left: 0rem;\n  right: 0rem;\n  margin: auto; }\n\n/** loading block end **/\n/** vue-animation start **/\n/** 菜单动画 start **/\n.gkvMenu-enter {\n  -webkit-animation: menuSlideUp 0.4s ease-in-out;\n          animation: menuSlideUp 0.4s ease-in-out; }\n\n.gkvMenu-leave {\n  -webkit-animation: menuSlideDown 0.4s ease-in-out;\n          animation: menuSlideDown 0.4s ease-in-out; }\n\n@-webkit-keyframes menuSlideUp {\n  from {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); }\n  to {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); } }\n\n@keyframes menuSlideUp {\n  from {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); }\n  to {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); } }\n\n@-webkit-keyframes menuSlideDown {\n  from {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); }\n  to {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); } }\n\n@keyframes menuSlideDown {\n  from {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); }\n  to {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); } }\n\n/** 菜单动画 end **/\n.next-enter {\n  position: fixed !important;\n  animation: nextIn .5s ease-in-out;\n  -webkit-animation: nextIn .5s ease-in-out; }\n\n.next-leave {\n  position: fixed !important;\n  animation: nextOut .5s ease-in-out;\n  -webkit-animation: nextOut .5s ease-in-out; }\n\n@keyframes nextIn {\n  from {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@keyframes nextOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); } }\n\n@-webkit-keyframes nextIn {\n  from {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@-webkit-keyframes nextOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); } }\n\n.prev-enter {\n  position: fixed !important;\n  animation: prevIn .5s ease-in-out;\n  -webkit-animation: prevIn .5s ease-in-out; }\n\n.prev-leave {\n  position: fixed !important;\n  -webkit-animation: prevOut .5s ease-in-out; }\n\n@keyframes prevIn {\n  from {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@keyframes prevOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); } }\n\n@-webkit-keyframes prevIn {\n  from {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@-webkit-keyframes prevOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); } }\n\n/** vue-animation end **/\n.none_border {\n  border: none !important; }\n\n#gkvHeader-home {\n  width: 100%;\n  height: 3.34rem;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/homePage/home_bg.png\");\n  background-size: cover; }\n\n.nav-home {\n  width: 100%;\n  height: 0.96rem;\n  position: relative; }\n\n.nav__topTitle-home {\n  position: absolute;\n  width: 70%;\n  top: 0;\n  left: 0;\n  right: 0;\n  height: 0.96rem;\n  line-height: 0.96rem;\n  margin: auto;\n  text-align: center;\n  font-size: 0.36rem;\n  color: #fff; }\n\n.pnc__main {\n  line-height: 1rem; }\n\n/*.pnc__main .icon {\r\n\tfont-size: 0.36rem;\r\n}*/\n.nav__menuBox-home {\n  line-height: 0.96rem;\n  padding-left: 0.3rem;\n  box-sizing: border-box; }\n\n.nav__menuIcon-home {\n  margin-right: 0.24rem; }\n\n.nav__menuIcon-home .icon {\n  font-size: 0.44rem;\n  line-height: 0.92rem;\n  color: #fff; }\n\n/*.nav__searchBox {\r\n    width: 2.5rem;\r\n    height: 100%;\r\n    margin-right: 0.27rem;\r\n    padding: 0.16rem 0rem;\r\n    box-sizing: border-box;\r\n    position: relative;\r\n}\r\n.nav__searchBox .icon {\r\n    position: absolute;\r\n    font-size: 0.35rem;\r\n    top: 50%;\r\n    right: 0rem;\r\n    line-height: 0.50rem;\r\n    margin-top: -0.26rem;\r\n    color: #e5e5e5;\r\n}*/\n.searchBox-home {\n  box-sizing: border-box;\n  height: 0.96rem;\n  line-height: 0.56rem;\n  background-color: transparent;\n  padding: 0.16rem 0 0;\n  width: 5rem;\n  margin: auto;\n  position: relative; }\n\n.search__InptBox-home {\n  position: relative; }\n\n.searchBox-home .search__Inpt-home {\n  height: 0.58rem;\n  border-radius: 999px;\n  padding-left: 0.7rem;\n  box-sizing: border-box;\n  outline: none;\n  width: 5rem;\n  background-color: rgba(0, 0, 0, 0.15);\n  border: 1px solid transparent;\n  padding-right: 0.2rem;\n  color: #ddd; }\n\n.search__InptBox-home .searchIcon-home {\n  position: absolute;\n  font-size: 0.40rem;\n  top: 50%;\n  left: 0.2rem;\n  line-height: 0.40rem;\n  margin-top: -0.2rem;\n  color: #ddd; }\n\n.search__clear-home .icon {\n  color: #ddd; }\n\n.search__Inpt-home::-webkit-input-placeholder {\n  color: #ddd; }\n\n.search__btn-home {\n  position: absolute;\n  right: 0;\n  z-index: -1;\n  /*opacity: 0;*/\n  color: #fff; }\n\n.nav__titleBox {\n  clear: both;\n  text-align: center;\n  color: #fff;\n  margin-top: 0.19rem; }\n\n.nav__title {\n  height: 0.56rem; }\n\n.titleLogo {\n  width: 2rem;\n  height: 0.53rem; }\n\n/*.nav__title::after {\r\n\tcontent: '';\r\n\tdisplay: block;\r\n\twidth: 1rem;\r\n\theight: 0.05rem;\r\n\tbackground-color: #fff;\r\n\tmargin: 0.21rem auto;\r\n\tborder-radius: 999px;\r\n}*/\n.nav__desc {\n  padding-top: 0.2rem; }\n\n/*gkvContent block start*/\n.home__compareWrap {\n  background-color: #fff;\n  padding-top: 0rem;\n  padding-bottom: 0.4rem;\n  margin-bottom: 0.35rem; }\n\n.home__compareWrap:last-child {\n  margin-bottom: 0rem; }\n\n.home__pfCompareBox {\n  padding: 0.3rem 0.3rem 0; }\n\n.pfCompareList {\n  text-align: center;\n  width: 25%; }\n\n.pfCompareList:last-child {\n  margin-right: 0rem; }\n\n.logoImg {\n  width: 0.97rem;\n  height: 0.97rem; }\n\n.home__processWrap {\n  width: 100%;\n  height: 2.5rem;\n  position: relative;\n  text-indent: 0.3rem;\n  margin-bottom: 0.35rem; }\n\n.home__processLink {\n  display: block;\n  width: 100%;\n  height: 100%;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/homePage/process_bg.png\");\n  background-size: cover;\n  padding-top: 0.19rem;\n  box-sizing: border-box; }\n\n.home__processTitle {\n  color: #333;\n  font-weight: bold; }\n\n.home__pfName {\n  font-size: 0.24rem;\n  color: #999; }\n\n.home__pfMoney {\n  font-size: 0.28rem;\n  color: #333; }\n\n.home__pfCompareLinks {\n  color: #333;\n  display: block;\n  font-size: 0.3rem;\n  height: 0.3rem;\n  line-height: 0.3rem;\n  padding: 0.18rem 0rem;\n  width: 5rem;\n  border: 1px solid #65c3df;\n  border-radius: 999px;\n  text-align: center;\n  margin: 0.41rem auto 0rem; }\n\n.home__compareTitle {\n  display: block;\n  color: #333;\n  width: 100%;\n  padding-top: 0.3rem;\n  font-size: 0.28rem;\n  height: 0.28rem;\n  line-height: 0.26rem;\n  padding-bottom: 0.3rem;\n  text-indent: 0.3rem;\n  font-weight: bold;\n  border-bottom: 1px solid #ddd; }\n\n.home__compareTitle .icon {\n  font-size: 0.3rem;\n  margin-right: 0.3rem;\n  color: #e5e5e5; }\n\n.home_compareSubTitle {\n  font-size: 0.24rem;\n  color: #999;\n  font-weight: normal;\n  margin-left: 0.2rem; }\n\n.home__idyCompareList {\n  text-align: center;\n  width: 2.5rem;\n  height: 1.82rem;\n  box-sizing: border-box;\n  margin-top: 0.3rem;\n  border-right: 1px solid #ddd; }\n\n.home__idyCompareList:last-child {\n  border-right: 0; }\n\n.home__idyName {\n  color: #333;\n  font-size: 0.36rem;\n  height: 0.36rem;\n  line-height: 0.34rem;\n  margin-top: 0.2rem; }\n\n.home__idyMoney {\n  color: #999;\n  font-size: 0.28rem;\n  height: 0.28rem;\n  line-height: 0.26rem;\n  margin-top: 0.26rem; }\n\n.home__idyMoney .unit {\n  font-size: 0.24rem; }\n\n.home__fundingProPanel {\n  border-bottom: 1px solid #ddd;\n  position: relative; }\n\n.home__fundingLinks {\n  color: #333; }\n\n.home__fundingShowMore {\n  position: absolute;\n  bottom: -0.34rem;\n  left: 0;\n  right: 0;\n  background-color: #fff;\n  width: 5.5rem;\n  margin: auto; }\n\n.home__showMoreLink {\n  color: #333;\n  display: block;\n  font-size: 0.3rem;\n  height: 0.3rem;\n  line-height: 0.3rem;\n  padding: 0.18rem 0rem;\n  width: 5rem;\n  border: 1px solid #ddd;\n  border-radius: 999px;\n  text-align: center;\n  margin: 0rem auto; }\n\n.home__fundingImg {\n  width: 100%;\n  height: 3.6rem;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/img.jpg\");\n  background-size: 100%;\n  background-position: center top;\n  position: relative; }\n\n.home__fundingStatus {\n  position: absolute;\n  left: 0.3rem;\n  top: 0.3rem;\n  width: 1.2rem;\n  height: 0.4rem;\n  border-radius: 999px;\n  background-color: #f3565d;\n  text-align: center;\n  font-size: 0.24rem;\n  line-height: 0.4rem;\n  color: #fff; }\n\n.home__fundingName {\n  border-top: 1px solid #ddd;\n  padding-top: 0.19rem;\n  padding-bottom: 0.19rem; }\n\n.home__logo {\n  display: inline-block;\n  line-height: 0.3rem;\n  height: 0.3rem;\n  border-radius: 999px;\n  padding: 0.07rem 0.15rem;\n  vertical-align: top; }\n\n.home__fundingDescBox {\n  padding: 0.2rem 0.3rem;\n  height: 0.36rem;\n  line-height: 0.36rem; }\n\n.home__fundingDescBox.home__fcMoneyBox {\n  padding: 0rem 0.3rem;\n  height: 1.15rem;\n  line-height: 1.15rem;\n  position: relative; }\n\n.home__fundingCate {\n  line-height: 0.34rem;\n  font-size: 0.28rem;\n  color: #999;\n  margin-right: 0.3rem; }\n\n.home__fundingDescBox.home__fcMoneyBox .home__fundingCate {\n  line-height: 1.15rem;\n  height: 1.15rem; }\n\n.home__fundingMoney {\n  font-size: 0.36rem;\n  color: #f3565d; }\n\n.home__fcWrap {\n  line-height: 0.4rem;\n  text-align: center;\n  margin: 0.15rem 0rem 0rem 0.3rem;\n  color: #999; }\n\n.home__fcTop {\n  border-bottom: 1px solid #ddd;\n  font-size: 0.24rem; }\n\n.home__fcTop .moneyLight {\n  font-size: 0.36rem; }\n\n.home__fcDown {\n  font-size: 0.22rem; }\n\n.home__fcDown .moneyLight {\n  font-size: 0.3rem; }\n\n.home__unit {\n  font-size: 0.24rem;\n  margin-left: 0.15rem;\n  color: #999; }\n\n/*gkvContent block end*/\n.searchBoxOn {\n  -webkit-animation-name: searchBoxOn;\n          animation-name: searchBoxOn;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards; }\n\n.searchOn {\n  -webkit-animation-name: searchOn;\n          animation-name: searchOn;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards; }\n\n.searchBtnOn {\n  z-index: 99;\n  -webkit-animation-name: searchBtnOn;\n          animation-name: searchBtnOn;\n  -webkit-animation-duration: 0.6s;\n          animation-duration: 0.6s;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards; }\n\n@-webkit-keyframes searchBoxOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6.8rem; } }\n\n@keyframes searchBoxOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6.8rem; } }\n\n@-webkit-keyframes searchOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6rem; } }\n\n@keyframes searchOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6rem; } }\n\n@-webkit-keyframes searchBtnOn {\n  from {\n    opacity: 0; }\n  to {\n    opacity: 1; } }\n\n@keyframes searchBtnOn {\n  from {\n    opacity: 0; }\n  to {\n    opacity: 1; } }\n\n.searchBoxOut {\n  -webkit-animation-name: searchBoxOut;\n          animation-name: searchBoxOut;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease; }\n\n.searchOut {\n  -webkit-animation-name: searchOut;\n          animation-name: searchOut;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease; }\n\n.searchBtnOut {\n  -webkit-animation-name: searchBtnOut;\n          animation-name: searchBtnOut;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease; }\n\n@-webkit-keyframes searchBoxOut {\n  from {\n    width: 6.8rem; }\n  to {\n    width: 5rem; } }\n\n@keyframes searchBoxOut {\n  from {\n    width: 6.8rem; }\n  to {\n    width: 5rem; } }\n\n@-webkit-keyframes searchOut {\n  from {\n    width: 6rem; }\n  to {\n    width: 5rem; } }\n\n@keyframes searchOut {\n  from {\n    width: 6rem; }\n  to {\n    width: 5rem; } }\n\n@-webkit-keyframes searchBtnOut {\n  from {\n    opacity: 1; }\n  to {\n    opacity: 0; } }\n\n@keyframes searchBtnOut {\n  from {\n    opacity: 1; }\n  to {\n    opacity: 0; } }\n\n/** android css start **/\n._searchBoxOn {\n  width: 6.8rem !important; }\n\n._searchOn {\n  width: 6rem !important; }\n\n._searchBtnOn {\n  display: block !important;\n  z-index: 99 !important; }\n\n/** android css end **/\n", ""]);
+	exports.push([module.id, "@charset \"UTF-8\";\n/** 设置字体颜色、背景和边框颜色 **/\n/** 设置字体的大小 **/\n/** 字体大小 **/\n.size20 {\n  font-size: 0.2rem; }\n\n.size22 {\n  font-size: 0.22rem; }\n\n.size24 {\n  font-size: 0.24rem; }\n\n.size26 {\n  font-size: 0.26rem; }\n\n.size28 {\n  font-size: 0.28rem; }\n\n.size30 {\n  font-size: 0.3rem; }\n\n.size32 {\n  font-size: 0.32rem; }\n\n.size34 {\n  font-size: 0.34rem; }\n\n.size36 {\n  font-size: 0.36rem; }\n\n.size38 {\n  font-size: 0.38rem; }\n\n.size40 {\n  font-size: 0.4rem; }\n\n.size42 {\n  font-size: 0.42rem; }\n\n.size44 {\n  font-size: 0.44rem; }\n\n.size46 {\n  font-size: 0.46rem; }\n\n.size48 {\n  font-size: 0.48rem; }\n\n.size50 {\n  font-size: 0.5rem; }\n\n.size52 {\n  font-size: 0.52rem; }\n\n.size54 {\n  font-size: 0.54rem; }\n\n.size56 {\n  font-size: 0.56rem; }\n\n.size58 {\n  font-size: 0.58rem; }\n\n.size60 {\n  font-size: 0.6rem; }\n\n.size80 {\n  font-size: 0.8rem !important; }\n\n/** ======== 1淘宝 2京东 3kickstarter 4indiegogo 5众筹网 6点名时间 7苏宁 8追梦 9青橘 10凤凰 11创客星球 12九九 13平安 更多 **/\n/** 平台字体颜色 **/\n.color0 {\n  color: #bebebe !important; }\n\n.color1 {\n  color: #f8cb00 !important; }\n\n.color2 {\n  color: #f3565d !important; }\n\n.color3 {\n  color: #45b7af !important; }\n\n.color4 {\n  color: #f9aaae !important; }\n\n.color5 {\n  color: #58A7DA !important; }\n\n.color6 {\n  color: #C8D220 !important; }\n\n.color7 {\n  color: #5BC0FF !important; }\n\n.color8 {\n  color: #5BADFC !important; }\n\n.color9 {\n  color: #A4D653 !important; }\n\n.color10 {\n  color: #FF7E45 !important; }\n\n.color11 {\n  color: #F778B3 !important; }\n\n.color12 {\n  color: #F9B85B !important; }\n\n.color13 {\n  color: #74EA7E !important; }\n\n/** 平台字体颜色 **/\n/** 平台背景颜色 **/\n.bg0 {\n  background-color: #bebebe !important;\n  border-color: #bebebe !important; }\n\n.bg1 {\n  background-color: #f8cb00 !important;\n  border-color: #f8cb00 !important; }\n\n.bg2 {\n  background-color: #f3565d !important;\n  border-color: #f3565d !important; }\n\n.bg3 {\n  background-color: #45b7af !important;\n  border-color: #45b7af !important; }\n\n.bg4 {\n  background-color: #f9aaae !important;\n  border-color: #f9aaae !important; }\n\n.bg5 {\n  background-color: #58A7DA !important;\n  border-color: #58A7DA !important; }\n\n.bg6 {\n  background-color: #C8D220 !important;\n  border-color: #C8D220 !important; }\n\n.bg7 {\n  background-color: #5BC0FF !important;\n  border-color: #5BC0FF !important; }\n\n.bg8 {\n  background-color: #5BADFC !important;\n  border-color: #5BADFC !important; }\n\n.bg9 {\n  background-color: #A4D653 !important;\n  border-color: #A4D653 !important; }\n\n.bg10 {\n  background-color: #FF7E45 !important;\n  border-color: #FF7E45 !important; }\n\n.bg11 {\n  background-color: #F778B3 !important;\n  border-color: #F778B3 !important; }\n\n.bg12 {\n  background-color: #F9B85B !important;\n  border-color: #F9B85B !important; }\n\n.bg13 {\n  background-color: #74EA7E !important;\n  border-color: #74EA7E !important; }\n\n/** 平台背景颜色 **/\n/** 平台比较字体颜色 **/\n.fcolor0 {\n  color: #bebebe !important; }\n\n.fcolor1 {\n  color: #65c3df !important; }\n\n.fcolor2 {\n  color: #b2e1ef !important; }\n\n.fcolor3 {\n  color: #d9d9d9 !important; }\n\n/** 平台比较字体颜色 **/\n/** 平台比较排名背景颜色 **/\n.bgcolor0 {\n  background-color: #bebebe !important;\n  border-color: #bebebe !important; }\n\n.bgcolor1 {\n  background-color: #65c3df !important;\n  border-color: #65c3df !important; }\n\n.bgcolor2 {\n  background-color: #b2e1ef !important;\n  border-color: #b2e1ef !important; }\n\n.bgcolor3 {\n  background-color: #d9d9d9 !important;\n  border-color: #d9d9d9 !important; }\n\n.bgcolor4 {\n  color: #999 !important;\n  border: 1px solid #999 !important;\n  font-size: 0.2rem !important;\n  background-color: transparent !important; }\n\n/** 平台比较排名背景颜色 **/\n/** funding style **/\n.fStyle0 {\n  background-color: #bebebe !important;\n  border-color: #bebebe !important; }\n\n.fStyle1 {\n  background-color: #2380be !important;\n  border-color: #2380be !important; }\n\n.fStyle2 {\n  background-color: #f3565d !important;\n  border-color: #f3565d !important; }\n\n.fStyle3 {\n  background-color: #45b7af !important;\n  border-color: #45b7af !important; }\n\n.fStyle4 {\n  background-color: #999 !important;\n  border-color: #999 !important; }\n\n.fStyle0 {\n  background-color: #f9aaae !important;\n  border-color: #f9aaae !important; }\n\n/** funding style **/\n/** 金币字体颜色 start **/\n.moneyLight {\n  color: red !important; }\n\n/** 金币字体颜色 end **/\n/**以前的平台页**/\n.blue1 {\n  background-color: #c0e5f1 !important; }\n\n.blue2 {\n  background-color: #81cce3 !important; }\n\n.fblue1 {\n  color: #c0e5f1 !important; }\n\n.fblue2 {\n  color: #81cce3 !important; }\n\n.red1 {\n  background-color: #f9aaae !important; }\n\n.red2 {\n  background-color: #f3565d !important; }\n\n.fred1 {\n  color: #f9aaae !important; }\n\n.fred2 {\n  color: #f3565d !important; }\n\n.green1 {\n  background-color: #a2dbd7 !important; }\n\n.green2 {\n  background-color: #45b7af !important; }\n\n.fgreen1 {\n  color: #a2dbd7 !important; }\n\n.fgreen2 {\n  color: #45b7af !important; }\n\n.yellow1 {\n  background-color: #fbe57f !important; }\n\n.yellow2 {\n  background-color: #f8cb00 !important; }\n\n.fyellow1 {\n  color: #fbe57f !important; }\n\n.fyellow2 {\n  color: #f8cb00 !important; }\n\n/**以前的平台页**/\n/** input **/\ninput::-webkit-search-cancel-button {\n  display: none; }\n\n/** clear float **/\n.clearfix:after {\n  content: \"\";\n  display: block;\n  height: 0;\n  visibility: hidden;\n  clear: both; }\n\n/** visiable **/\n.show {\n  display: block !important; }\n\n.hide {\n  display: none !important; }\n\n/** float **/\n.fl {\n  float: left; }\n\n.fr {\n  float: right; }\n\nhtml, body {\n  font-size: 100px;\n  font-family: 'microsoft yahei';\n  height: 100%;\n  background-color: #e5e5e5; }\n\n@media (max-width: 320px) {\n  html, body {\n    font-size: 42.6667px; } }\n\n@media (max-width: 375px) {\n  html, body {\n    font-size: 50px; } }\n\n@media (max-width: 414px) {\n  html, body {\n    font-size: 55.2px; } }\n\n#hideForm {\n  display: none; }\n\n/** gkvBox **/\n#gkvBox {\n  font-size: 0.3rem;\n  width: 100%;\n  background-color: #e5e5e5;\n  position: relative;\n  max-width: 7.5rem;\n  margin: auto; }\n\n/** person center main block start **/\n.pnc__main {\n  display: block;\n  width: 1rem;\n  text-align: center;\n  height: 0.96rem;\n  line-height: 1rem; }\n\n.pnc__mainLink {\n  color: #fff; }\n\n.pnc__main .icon {\n  font-size: 0.4rem; }\n\n/** person center main block end **/\n/** gkvMaskBox block start **/\n#gkvMaskBox {\n  width: 100%;\n  height: 5.94rem;\n  position: fixed;\n  bottom: 0rem;\n  left: 0rem;\n  right: 0rem;\n  background-color: #fff;\n  z-index: 999;\n  border-top: 1px solid #d7d7d7;\n  max-width: 7.68rem;\n  margin: auto; }\n\n.container {\n  padding: 0rem 0.3rem;\n  box-sizing: border-box; }\n\n.maskWrap {\n  width: 100%;\n  height: 100%; }\n\n.mask__opt {\n  background-color: #e5e5e5;\n  width: 100%;\n  height: 0.8rem;\n  padding: 0.11rem 0.3rem;\n  box-sizing: border-box; }\n\n.mask__btn {\n  display: block;\n  width: 1rem;\n  height: 0.56rem;\n  text-align: center;\n  line-height: 0.56rem;\n  color: #555;\n  font-size: 0.25rem; }\n\n.mask__btn .icon {\n  font-size: 0.3rem; }\n\n.mask__cancel {\n  border-radius: 999px;\n  border: 1px solid #c9c9c9;\n  box-sizing: border-box; }\n\n.mask__panel {\n  padding: 0.2rem;\n  box-sizing: border-box;\n  width: 100%;\n  height: 5.14rem;\n  background-color: #fff; }\n\n.mask__links {\n  margin: 0rem 0.1rem 0.3rem;\n  border: 1px solid #d8d8d8;\n  border-radius: 999px;\n  height: 0.6rem;\n  padding: 0rem 0.13rem;\n  box-sizing: border-box; }\n\n.mask__linkTxt {\n  color: #555;\n  display: block;\n  width: 100%;\n  line-height: 0.56rem;\n  height: 0.56rem;\n  font-size: 0.25rem; }\n\n.mask__website .mask__linkTxt,\n.mask__more .mask__linkTxt {\n  color: #fff; }\n\n.mask__firstRow {\n  margin: 0rem 0.05rem 0.3rem !important; }\n\n.mask__firstRow:first-child {\n  margin: 0rem 0.1rem 0.3rem !important; }\n\n.mask__K {\n  background-color: #7ac13f;\n  border: 1px solid #7ac13f; }\n\n.mask__Go {\n  background-color: #ec0d77;\n  border: 1px solid #ec0d77; }\n\n.mask__Tao {\n  background-color: #d7233c;\n  border: 1px solid #d7233c; }\n\n.mask__JD {\n  background-color: #fd6804;\n  border: 1px solid #fd6804; }\n\n.mask__all {\n  background-color: #2280be;\n  border: 1px solid #2280be; }\n\n/** gkvMaskBox block end **/\n/** gkvMaskAllBox block start **/\n.gkvMaskAllBox {\n  position: fixed;\n  max-width: 7.5rem;\n  top: 0;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  background-color: #fff;\n  margin: auto;\n  z-index: 99999; }\n\n.mask__allPfTitle {\n  height: 0.96rem;\n  line-height: 0.96rem;\n  text-align: center;\n  border-bottom: 1px solid #ddd; }\n\n.mask__allPfBox {\n  padding-top: 0.4rem;\n  height: 4.65rem; }\n\n.mask__allCateTitle {\n  margin: 0 0.3rem;\n  box-sizing: border-box;\n  border-bottom: 1px solid #ddd;\n  color: #666; }\n\n.mask__allCateBox {\n  padding-top: 0.4rem; }\n\n.mask__allReturn {\n  position: absolute;\n  width: 0.96rem;\n  left: 0rem;\n  height: 0.96rem;\n  line-height: 0.96rem;\n  text-align: center;\n  color: #999; }\n\n/** gkvMaskAllBox block end **/\n/** gkvSearch block start **/\n#gkvSearch {\n  width: 100%;\n  height: 100%;\n  position: fixed;\n  z-index: 9999;\n  top: 0rem;\n  right: 0rem;\n  left: 0rem;\n  max-width: 7.68rem;\n  margin: auto; }\n\n#gkvSearch.searchPage {\n  position: static; }\n\n.searchBox {\n  width: 100%;\n  padding: 0.18rem 0.3rem;\n  background-color: #fff;\n  box-sizing: border-box;\n  height: 0.96rem;\n  line-height: 0.56rem; }\n\n.search__InptBox {\n  position: relative; }\n\n.search__InptBox .searchIcon {\n  position: absolute;\n  font-size: 0.40rem;\n  top: 50%;\n  left: 0.2rem;\n  line-height: 0.40rem;\n  margin-top: -0.2rem;\n  color: #999; }\n\n.search__Inpt {\n  width: 5.4rem;\n  height: 0.58rem;\n  background-color: #e5e5e5;\n  border: 1px solid #e5e5e5;\n  border-radius: 999px;\n  padding-left: 0.7rem;\n  padding-right: 0.6rem;\n  box-sizing: border-box;\n  outline: none; }\n\n.search__clear {\n  position: absolute;\n  right: 0.1rem;\n  top: -0.02rem;\n  display: block;\n  font-size: 1rem;\n  width: 0.6rem;\n  height: 0.6rem;\n  line-height: 0rem;\n  text-align: center;\n  color: #999; }\n\n.search__clear .icon {\n  font-size: 0.3rem; }\n\n.search__return {\n  width: 0.7rem;\n  text-align: left;\n  color: #aaa;\n  height: 0.6rem; }\n\n.search__return .icon {\n  font-size: 0.4rem;\n  line-height: 0.4rem; }\n\n.search__search {\n  width: 0.8rem;\n  text-align: right;\n  color: #555; }\n\n.search__title {\n  color: #555;\n  height: 0.58rem;\n  line-height: 0.58rem;\n  text-indent: 0.3rem;\n  background-color: #fff; }\n\n.search__title.search__searchTitle {\n  border-top: 1px solid #ddd;\n  border-bottom: 1px solid #ddd;\n  text-indent: 0.3rem;\n  color: #999;\n  background-color: #fff; }\n\n.search__results {\n  height: 100%;\n  background-color: #fff; }\n\n/** gkvSearch block end **/\n/** qrCodeBox start **/\n.pnc__qrCodeBox {\n  position: fixed;\n  top: 0;\n  bottom: 0;\n  right: 0;\n  left: 0;\n  background-color: rgba(0, 0, 0, 0.7);\n  max-width: 7.5rem;\n  margin: auto; }\n\n.pnc__qrTitle {\n  width: 100%;\n  color: #fff;\n  text-align: center;\n  margin-top: 2.5rem;\n  font-size: 0.4rem; }\n\n.pnc__qrCode {\n  width: 4rem;\n  height: 4rem;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/personPage/gkvplus_qr.jpg\");\n  background-size: cover;\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  margin: -2rem 0 0 -2rem; }\n\n.pnc__closeBox {\n  position: absolute;\n  top: 0;\n  right: 0;\n  width: 1.2rem;\n  height: 1.2rem;\n  box-sizing: border-box;\n  padding: 0.4rem 0.5rem 0 0;\n  text-align: right; }\n\n.pnc__closeBox .icon {\n  color: #fff; }\n\n/** qrCodeBox start **/\n/** gkvFooter block start **/\n#gkvFooter {\n  padding: 0.3rem 0.5rem;\n  color: #fff;\n  height: 1.15rem;\n  background-color: #959595;\n  box-sizing: border-box; }\n\n.gkv__CopyBox {\n  height: 0.5rem;\n  line-height: 0.5rem; }\n\n.gkv__CopyDown {\n  margin-top: 0.06rem;\n  height: 0.24rem;\n  line-height: 0.24rem; }\n\n.gkv__aboutMeLink {\n  display: block;\n  width: 1.6rem;\n  height: 0.5rem;\n  color: #fff;\n  border-radius: 999px;\n  line-height: 0.5rem;\n  text-align: right;\n  padding-right: 0.2rem; }\n\n.gkv__feekback {\n  width: 0.22rem;\n  height: 0.22rem;\n  vertical-align: middle;\n  padding-right: 0.1rem; }\n\n/** gkvFooter block end **/\n/** loading block start **/\n.pacman > div:first-of-type, .pacman > div:nth-child(2) {\n  width: 0;\n  height: 0;\n  border-right: 0.5rem solid transparent;\n  border-top: 0.5rem solid #65c3df;\n  border-left: 0.5rem solid #65c3df;\n  border-bottom: 0.5rem solid #65c3df;\n  border-radius: 0.5rem; }\n\n@-webkit-keyframes rotate_pacman_half_up {\n  0%, 100% {\n    -webkit-transform: rotate(270deg);\n    transform: rotate(270deg); }\n  50% {\n    -webkit-transform: rotate(360deg);\n    transform: rotate(360deg); } }\n\n@keyframes rotate_pacman_half_up {\n  0%, 100% {\n    -webkit-transform: rotate(270deg);\n    transform: rotate(270deg); }\n  50% {\n    -webkit-transform: rotate(360deg);\n    transform: rotate(360deg); } }\n\n@-webkit-keyframes rotate_pacman_half_down {\n  0%, 100% {\n    -webkit-transform: rotate(90deg);\n    transform: rotate(90deg); }\n  50% {\n    -webkit-transform: rotate(0);\n    transform: rotate(0); } }\n\n@keyframes rotate_pacman_half_down {\n  0%, 100% {\n    -webkit-transform: rotate(90deg);\n    transform: rotate(90deg); }\n  50% {\n    -webkit-transform: rotate(0);\n    transform: rotate(0); } }\n\n@-webkit-keyframes pacman-balls {\n  75% {\n    opacity: .7; }\n  100% {\n    -webkit-transform: translate(-1rem, -0.0625rem);\n    transform: translate(-1rem, -0.0625rem); } }\n\n@keyframes pacman-balls {\n  75% {\n    opacity: .7; }\n  100% {\n    -webkit-transform: translate(-1rem, -0.0625rem);\n    transform: translate(-1rem, -0.0625rem); } }\n\n.pacman {\n  position: relative; }\n\n.pacman > div:nth-child(3) {\n  -webkit-animation: pacman-balls 1s 0s infinite linear;\n  animation: pacman-balls 1s 0s infinite linear; }\n\n.pacman > div:nth-child(4) {\n  -webkit-animation: pacman-balls 1s .33s infinite linear;\n  animation: pacman-balls 1s .33s infinite linear; }\n\n.pacman > div:nth-child(5) {\n  -webkit-animation: pacman-balls 1s .66s infinite linear;\n  animation: pacman-balls 1s .66s infinite linear; }\n\n.pacman > div:first-of-type {\n  -webkit-animation: rotate_pacman_half_up .5s 0s infinite;\n  animation: rotate_pacman_half_up .5s 0s infinite; }\n\n.pacman > div:nth-child(2) {\n  -webkit-animation: rotate_pacman_half_down .5s 0s infinite;\n  animation: rotate_pacman_half_down .5s 0s infinite;\n  margin-top: -1rem; }\n\n.pacman > div:nth-child(3), .pacman > div:nth-child(4), .pacman > div:nth-child(5), .pacman > div:nth-child(6) {\n  background-color: #65c3df;\n  border-radius: 100%;\n  margin: 0.2rem;\n  width: 0.2rem;\n  height: 0.2rem;\n  position: absolute;\n  -webkit-transform: translate(0, -0.0625rem);\n  transform: translate(0, -0.0625rem);\n  top: 0.25rem;\n  left: 1.4rem; }\n\n#loading {\n  position: absolute;\n  width: 1rem;\n  height: 1rem;\n  top: 2rem;\n  left: 0rem;\n  right: 0rem;\n  margin: auto; }\n\n/** loading block end **/\n/** vue-animation start **/\n/** 菜单动画 start **/\n.gkvMenu-enter {\n  -webkit-animation: menuSlideUp 0.4s ease-in-out;\n          animation: menuSlideUp 0.4s ease-in-out; }\n\n.gkvMenu-leave {\n  -webkit-animation: menuSlideDown 0.4s ease-in-out;\n          animation: menuSlideDown 0.4s ease-in-out; }\n\n@-webkit-keyframes menuSlideUp {\n  from {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); }\n  to {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); } }\n\n@keyframes menuSlideUp {\n  from {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); }\n  to {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); } }\n\n@-webkit-keyframes menuSlideDown {\n  from {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); }\n  to {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); } }\n\n@keyframes menuSlideDown {\n  from {\n    -webkit-transform: translateY(0);\n    transform: translateY(0); }\n  to {\n    -webkit-transform: translateY(100%);\n    transform: translateY(100%); } }\n\n/** 菜单动画 end **/\n.next-enter {\n  position: fixed !important;\n  -webkit-animation: nextIn .5s ease-in-out;\n          animation: nextIn .5s ease-in-out; }\n\n.next-leave {\n  position: fixed !important;\n  -webkit-animation: nextOut .5s ease-in-out;\n          animation: nextOut .5s ease-in-out; }\n\n@-webkit-keyframes nextIn {\n  from {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@keyframes nextIn {\n  from {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@-webkit-keyframes nextOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); } }\n\n@keyframes nextOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); } }\n\n.prev-enter {\n  position: fixed !important;\n  -webkit-animation: prevIn .5s ease-in-out;\n          animation: prevIn .5s ease-in-out; }\n\n.prev-leave {\n  position: fixed !important;\n  -webkit-animation: prevOut .5s ease-in-out;\n          animation: prevOut .5s ease-in-out; }\n\n@-webkit-keyframes prevIn {\n  from {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@keyframes prevIn {\n  from {\n    -webkit-transform: translateX(-100%);\n    transform: translateX(-100%); }\n  to {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); } }\n\n@-webkit-keyframes prevOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); } }\n\n@keyframes prevOut {\n  from {\n    -webkit-transform: translateX(0%);\n    transform: translateX(0%); }\n  to {\n    -webkit-transform: translateX(100%);\n    transform: translateX(100%); } }\n\n/** vue-animation end **/\n.none_border {\n  border: none !important; }\n\n#gkvHeader-home {\n  width: 100%;\n  height: 3.34rem;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/homePage/home_bg.png\");\n  background-size: cover; }\n\n.nav-home {\n  width: 100%;\n  height: 0.96rem;\n  position: relative; }\n\n.nav__topTitle-home {\n  position: absolute;\n  width: 70%;\n  top: 0;\n  left: 0;\n  right: 0;\n  height: 0.96rem;\n  line-height: 0.96rem;\n  margin: auto;\n  text-align: center;\n  font-size: 0.36rem;\n  color: #fff; }\n\n.pnc__main {\n  line-height: 1rem; }\n\n/*.pnc__main .icon {\r\n\tfont-size: 0.36rem;\r\n}*/\n.nav__menuBox-home {\n  line-height: 0.96rem;\n  padding-left: 0.3rem;\n  box-sizing: border-box; }\n\n.nav__menuIcon-home {\n  margin-right: 0.24rem; }\n\n.nav__menuIcon-home .icon {\n  font-size: 0.44rem;\n  line-height: 0.92rem;\n  color: #fff; }\n\n/*.nav__searchBox {\r\n    width: 2.5rem;\r\n    height: 100%;\r\n    margin-right: 0.27rem;\r\n    padding: 0.16rem 0rem;\r\n    box-sizing: border-box;\r\n    position: relative;\r\n}\r\n.nav__searchBox .icon {\r\n    position: absolute;\r\n    font-size: 0.35rem;\r\n    top: 50%;\r\n    right: 0rem;\r\n    line-height: 0.50rem;\r\n    margin-top: -0.26rem;\r\n    color: #e5e5e5;\r\n}*/\n.searchBox-home {\n  box-sizing: border-box;\n  height: 0.96rem;\n  line-height: 0.56rem;\n  background-color: transparent;\n  padding: 0.16rem 0 0;\n  width: 5rem;\n  margin: auto;\n  position: relative; }\n\n.search__InptBox-home {\n  position: relative; }\n\n.searchBox-home .search__Inpt-home {\n  height: 0.58rem;\n  border-radius: 999px;\n  padding-left: 0.7rem;\n  box-sizing: border-box;\n  outline: none;\n  width: 5rem;\n  background-color: rgba(0, 0, 0, 0.15);\n  border: 1px solid transparent;\n  padding-right: 0.2rem;\n  color: #ddd; }\n\n.search__InptBox-home .searchIcon-home {\n  position: absolute;\n  font-size: 0.40rem;\n  top: 50%;\n  left: 0.2rem;\n  line-height: 0.40rem;\n  margin-top: -0.2rem;\n  color: #ddd; }\n\n.search__clear-home .icon {\n  color: #ddd; }\n\n.search__Inpt-home::-webkit-input-placeholder {\n  color: #ddd; }\n\n.search__btn-home {\n  position: absolute;\n  right: 0;\n  z-index: -1;\n  /*opacity: 0;*/\n  color: #fff; }\n\n.nav__titleBox {\n  clear: both;\n  text-align: center;\n  color: #fff;\n  margin-top: 0.19rem; }\n\n.nav__title {\n  height: 0.56rem; }\n\n.titleLogo {\n  width: 2rem;\n  height: 0.53rem; }\n\n/*.nav__title::after {\r\n\tcontent: '';\r\n\tdisplay: block;\r\n\twidth: 1rem;\r\n\theight: 0.05rem;\r\n\tbackground-color: #fff;\r\n\tmargin: 0.21rem auto;\r\n\tborder-radius: 999px;\r\n}*/\n.nav__desc {\n  padding-top: 0.2rem; }\n\n/*gkvContent block start*/\n.home__compareWrap {\n  background-color: #fff;\n  padding-top: 0rem;\n  padding-bottom: 0.4rem;\n  margin-bottom: 0.35rem; }\n\n.home__compareWrap:last-child {\n  margin-bottom: 0rem; }\n\n.home__pfCompareBox {\n  padding: 0.3rem 0.3rem 0; }\n\n.pfCompareList {\n  text-align: center;\n  width: 25%; }\n\n.pfCompareList:last-child {\n  margin-right: 0rem; }\n\n.logoImg {\n  width: 0.97rem;\n  height: 0.97rem; }\n\n.home__processWrap {\n  width: 100%;\n  height: 2.5rem;\n  position: relative;\n  text-indent: 0.3rem;\n  margin-bottom: 0.35rem; }\n\n.home__processLink {\n  display: block;\n  width: 100%;\n  height: 100%;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/homePage/process_bg.png\");\n  background-size: cover;\n  padding-top: 0.19rem;\n  box-sizing: border-box; }\n\n.home__processTitle {\n  color: #333;\n  font-weight: bold; }\n\n.home__pfName {\n  font-size: 0.24rem;\n  color: #999; }\n\n.home__pfMoney {\n  font-size: 0.28rem;\n  color: #333; }\n\n.home__pfCompareLinks {\n  color: #333;\n  display: block;\n  font-size: 0.3rem;\n  height: 0.3rem;\n  line-height: 0.3rem;\n  padding: 0.18rem 0rem;\n  width: 5rem;\n  border: 1px solid #65c3df;\n  border-radius: 999px;\n  text-align: center;\n  margin: 0.41rem auto 0rem; }\n\n.home__compareTitle {\n  display: block;\n  color: #333;\n  width: 100%;\n  padding-top: 0.3rem;\n  font-size: 0.28rem;\n  height: 0.28rem;\n  line-height: 0.26rem;\n  padding-bottom: 0.3rem;\n  text-indent: 0.3rem;\n  font-weight: bold;\n  border-bottom: 1px solid #ddd; }\n\n.home__compareTitle .icon {\n  font-size: 0.3rem;\n  margin-right: 0.3rem;\n  color: #e5e5e5; }\n\n.home_compareSubTitle {\n  font-size: 0.24rem;\n  color: #999;\n  font-weight: normal;\n  margin-left: 0.2rem; }\n\n.home__idyCompareList {\n  text-align: center;\n  width: 2.5rem;\n  height: 1.82rem;\n  box-sizing: border-box;\n  margin-top: 0.3rem;\n  border-right: 1px solid #ddd; }\n\n.home__idyCompareList:last-child {\n  border-right: 0; }\n\n.home__idyName {\n  color: #333;\n  font-size: 0.36rem;\n  height: 0.36rem;\n  line-height: 0.34rem;\n  margin-top: 0.2rem; }\n\n.home__idyMoney {\n  color: #999;\n  font-size: 0.28rem;\n  height: 0.28rem;\n  line-height: 0.26rem;\n  margin-top: 0.26rem; }\n\n.home__idyMoney .unit {\n  font-size: 0.24rem; }\n\n.home__fundingProPanel {\n  border-bottom: 1px solid #ddd;\n  position: relative; }\n\n.home__fundingLinks {\n  color: #333; }\n\n.home__fundingShowMore {\n  position: absolute;\n  bottom: -0.34rem;\n  left: 0;\n  right: 0;\n  background-color: #fff;\n  width: 5.5rem;\n  margin: auto; }\n\n.home__showMoreLink {\n  color: #333;\n  display: block;\n  font-size: 0.3rem;\n  height: 0.3rem;\n  line-height: 0.3rem;\n  padding: 0.18rem 0rem;\n  width: 5rem;\n  border: 1px solid #ddd;\n  border-radius: 999px;\n  text-align: center;\n  margin: 0rem auto; }\n\n.home__fundingImg {\n  width: 100%;\n  height: 3.6rem;\n  background-image: url(\"https://s3.cn-north-1.amazonaws.com.cn/index/m/common/images/img.jpg\");\n  background-size: 100%;\n  background-position: center top;\n  position: relative; }\n\n.home__fundingStatus {\n  position: absolute;\n  left: 0.3rem;\n  top: 0.3rem;\n  width: 1.2rem;\n  height: 0.4rem;\n  border-radius: 999px;\n  background-color: #f3565d;\n  text-align: center;\n  font-size: 0.24rem;\n  line-height: 0.4rem;\n  color: #fff; }\n\n.home__fundingName {\n  border-top: 1px solid #ddd;\n  padding-top: 0.19rem;\n  padding-bottom: 0.19rem; }\n\n.home__logo {\n  display: inline-block;\n  line-height: 0.3rem;\n  height: 0.3rem;\n  border-radius: 999px;\n  padding: 0.07rem 0.15rem;\n  vertical-align: top; }\n\n.home__fundingDescBox {\n  padding: 0.2rem 0.3rem;\n  height: 0.36rem;\n  line-height: 0.36rem; }\n\n.home__fundingDescBox.home__fcMoneyBox {\n  padding: 0rem 0.3rem;\n  height: 1.15rem;\n  line-height: 1.15rem;\n  position: relative; }\n\n.home__fundingCate {\n  line-height: 0.34rem;\n  font-size: 0.28rem;\n  color: #999;\n  margin-right: 0.3rem; }\n\n.home__fundingDescBox.home__fcMoneyBox .home__fundingCate {\n  line-height: 1.15rem;\n  height: 1.15rem; }\n\n.home__fundingMoney {\n  font-size: 0.36rem;\n  color: #f3565d; }\n\n.home__fcWrap {\n  line-height: 0.4rem;\n  text-align: center;\n  margin: 0.15rem 0rem 0rem 0.3rem;\n  color: #999; }\n\n.home__fcTop {\n  border-bottom: 1px solid #ddd;\n  font-size: 0.24rem; }\n\n.home__fcTop .moneyLight {\n  font-size: 0.36rem; }\n\n.home__fcDown {\n  font-size: 0.22rem; }\n\n.home__fcDown .moneyLight {\n  font-size: 0.3rem; }\n\n.home__unit {\n  font-size: 0.24rem;\n  margin-left: 0.15rem;\n  color: #999; }\n\n/*gkvContent block end*/\n.searchBoxOn {\n  -webkit-animation-name: searchBoxOn;\n          animation-name: searchBoxOn;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards; }\n\n.searchOn {\n  -webkit-animation-name: searchOn;\n          animation-name: searchOn;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards; }\n\n.searchBtnOn {\n  z-index: 99;\n  -webkit-animation-name: searchBtnOn;\n          animation-name: searchBtnOn;\n  -webkit-animation-duration: 0.6s;\n          animation-duration: 0.6s;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards; }\n\n@-webkit-keyframes searchBoxOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6.8rem; } }\n\n@keyframes searchBoxOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6.8rem; } }\n\n@-webkit-keyframes searchOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6rem; } }\n\n@keyframes searchOn {\n  from {\n    width: 5rem; }\n  to {\n    width: 6rem; } }\n\n@-webkit-keyframes searchBtnOn {\n  from {\n    opacity: 0; }\n  to {\n    opacity: 1; } }\n\n@keyframes searchBtnOn {\n  from {\n    opacity: 0; }\n  to {\n    opacity: 1; } }\n\n.searchBoxOut {\n  -webkit-animation-name: searchBoxOut;\n          animation-name: searchBoxOut;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease; }\n\n.searchOut {\n  -webkit-animation-name: searchOut;\n          animation-name: searchOut;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease; }\n\n.searchBtnOut {\n  -webkit-animation-name: searchBtnOut;\n          animation-name: searchBtnOut;\n  -webkit-animation-duration: 0.3s;\n          animation-duration: 0.3s;\n  -webkit-animation-fill-mode: forwards;\n          animation-fill-mode: forwards;\n  -webkit-animation-timing-function: ease;\n          animation-timing-function: ease; }\n\n@-webkit-keyframes searchBoxOut {\n  from {\n    width: 6.8rem; }\n  to {\n    width: 5rem; } }\n\n@keyframes searchBoxOut {\n  from {\n    width: 6.8rem; }\n  to {\n    width: 5rem; } }\n\n@-webkit-keyframes searchOut {\n  from {\n    width: 6rem; }\n  to {\n    width: 5rem; } }\n\n@keyframes searchOut {\n  from {\n    width: 6rem; }\n  to {\n    width: 5rem; } }\n\n@-webkit-keyframes searchBtnOut {\n  from {\n    opacity: 1; }\n  to {\n    opacity: 0; } }\n\n@keyframes searchBtnOut {\n  from {\n    opacity: 1; }\n  to {\n    opacity: 0; } }\n\n/** android css start **/\n._searchBoxOn {\n  width: 6.8rem !important; }\n\n._searchOn {\n  width: 6rem !important; }\n\n._searchBtnOn {\n  display: block !important;\n  z-index: 99 !important; }\n\n/** android css end **/\n", ""]);
 
 	// exports
 
@@ -13714,7 +13481,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(12)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -13723,20 +13489,14 @@
 	__vue_template__ = __webpack_require__(21)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-77b8d372/GkvHeader.vue"
+	  var id = "_v-d828ea04/GkvHeader.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -13799,7 +13559,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(14)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -13808,20 +13567,14 @@
 	__vue_template__ = __webpack_require__(17)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-1fd6b3c6/Header.vue"
+	  var id = "_v-9ae4acae/Header.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -13844,7 +13597,8 @@
 	exports.default = {
 		vuex: {
 			actions: {
-				isShowMenu: _actions.isShowMenu
+				isShowMenu: _actions.isShowMenu,
+				noneAlert: _actions.noneAlert
 			}
 		}
 	};
@@ -13856,7 +13610,8 @@
 	// 			<i class="icon iconfont"></i>
 	// 		</div>
 	// 	</div>
-	// 	<a v-link="{path:'center'}" class="pnc__main pnc__mainLink fr">
+	// 	<!-- v-link="{path:'center'}"-->
+	// 	<a @click="noneAlert" class="pnc__main pnc__mainLink fr">
 	// 		<i class="icon iconfont"></i>
 	// 	</a>
 	// </template>
@@ -13873,7 +13628,7 @@
 	Object.defineProperty(exports, "__esModule", {
 		value: true
 	});
-	exports.isReply = exports.isFocus = exports.protTabs = exports.listTabs = exports.artTabs = exports.projectTabs = exports.clickPlatform = exports.clickTabs = exports.closeClick = exports.isClick = exports.goPath = exports.searchOut = exports.searchIn = exports.isShowMenuMore = exports.isShowMenu = undefined;
+	exports.noneAlert = exports.isReply = exports.isFocus = exports.protTabs = exports.listTabs = exports.artTabs = exports.projectTabs = exports.clickPlatform = exports.clickTabs = exports.closeClick = exports.isClick = exports.goPath = exports.searchOut = exports.searchIn = exports.isShowMenuMore = exports.isShowMenu = undefined;
 
 	var _mutationTypes = __webpack_require__(16);
 
@@ -13903,6 +13658,9 @@
 	var protTabs = exports.protTabs = makeAction(_mutationTypes.PRODUCT_TABS);
 	var isFocus = exports.isFocus = makeAction(_mutationTypes.IS_FOCUS);
 	var isReply = exports.isReply = makeAction(_mutationTypes.IS_REPLY);
+
+	/** NONE_ALERT **/
+	var noneAlert = exports.noneAlert = makeAction(_mutationTypes.NONE_ALERT);
 
 	function makeAction(type) {
 		return function (_ref) {
@@ -13946,18 +13704,19 @@
 	var IS_FOCUS = exports.IS_FOCUS = 'IS_FOCUS';
 	var IS_REPLY = exports.IS_REPLY = 'IS_REPLY';
 
+	var NONE_ALERT = exports.NONE_ALERT = "NONE_ALERT";
+
 /***/ },
 /* 17 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"nav__menuBox-home fl clearfix\" @click=\"isShowMenu\">\n\t<div class=\"nav__menuIcon-home fl\">\n\t\t<i class=\"icon iconfont\"></i>\n\t</div>\n</div>\n<a v-link=\"{path:'center'}\" class=\"pnc__main pnc__mainLink fr\">\n\t<i class=\"icon iconfont\"></i>\n</a>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"nav__menuBox-home fl clearfix\" @click=\"isShowMenu\">\n\t<div class=\"nav__menuIcon-home fl\">\n\t\t<i class=\"icon iconfont\"></i>\n\t</div>\n</div>\n<!-- v-link=\"{path:'center'}\"-->\n<a @click=\"noneAlert\" class=\"pnc__main pnc__mainLink fr\">\n\t<i class=\"icon iconfont\"></i>\n</a>\n";
 
 /***/ },
 /* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(19)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -13966,20 +13725,14 @@
 	__vue_template__ = __webpack_require__(20)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-62df8305/Search.vue"
+	  var id = "_v-5176d6f9/Search.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14026,13 +13779,13 @@
 	// 	<div class="searchBox-home clearfix" :class="search.searchBox">
 	// 		<div class="search__InptBox-home fl">
 	// 			<i class="icon iconfont searchIcon-home"></i>
-	// 			<input class="search__Inpt-home" 
-	// 				   type="search" 
-	// 				   name="keyword" 
-	// 				   value="" 
-	// 				   placeholder="寻找最热硬件" 
-	// 				   @focus="searchIn" 
-	// 				   @blur="searchOut" 
+	// 			<input class="search__Inpt-home"
+	// 				   type="search"
+	// 				   name="keyword"
+	// 				   value=""
+	// 				   placeholder="寻找最热硬件"
+	// 				   @focus="searchIn"
+	// 				   @blur="searchOut"
 	// 				   @keyup.enter="goSearch"
 	// 				   :class="search.search">
 	// 		</div>
@@ -14061,7 +13814,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(23)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14070,20 +13822,14 @@
 	__vue_template__ = __webpack_require__(36)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-243b4f64/GkvContent.vue"
+	  var id = "_v-e340ed50/GkvContent.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14160,7 +13906,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(25)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14169,20 +13914,14 @@
 	__vue_template__ = __webpack_require__(26)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-0a345afa/C-platform.vue"
+	  var id = "_v-745894ee/C-platform.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14206,7 +13945,8 @@
 		props: ['platform'],
 		vuex: {
 			actions: {
-				isClick: _actions.isClick
+				isClick: _actions.isClick,
+				noneAlert: _actions.noneAlert
 			}
 		}
 	};
@@ -14218,8 +13958,11 @@
 	// 			{{ platform.title }}<span class="home_compareSubTitle">{{ platform.subTitle }}</span>
 	// 		</div>
 	// 		<ul class="home__pfCompareBox clearfix">
-	// 			<li v-for="item in platform.list" class="pfCompareList mask__website fl" :data-id="item.dataId">
-	// 				<img :src=item.imgSrc alt="" class="logoImg">
+	// 			<li v-for="item in platform.list"
+	// 				class="pfCompareList mask__website fl"
+	// 				:data-id="item.dataId"
+	// 				@click="noneAlert">
+	// 				<img :src="item.imgSrc" class="logoImg">
 	// 				<div class="home__pfName searchVal">{{ item.name }}</div>
 	// 				<div class="home__pfMoney">{{ item.money }}</div>
 	// 			</li>
@@ -14233,14 +13976,13 @@
 /* 26 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__compareWrap\">\n\t<div class=\"home__compareTitle none_border\">\n\t\t{{ platform.title }}<span class=\"home_compareSubTitle\">{{ platform.subTitle }}</span>\n\t</div>\n\t<ul class=\"home__pfCompareBox clearfix\">\n\t\t<li v-for=\"item in platform.list\" class=\"pfCompareList mask__website fl\" :data-id=\"item.dataId\">\n\t\t\t<img :src=item.imgSrc alt=\"\" class=\"logoImg\">\n\t\t\t<div class=\"home__pfName searchVal\">{{ item.name }}</div>\n\t\t\t<div class=\"home__pfMoney\">{{ item.money }}</div>\n\t\t</li>\n\t</ul>\n\t<a v-link=\"{path: '/platform'}\" class=\"home__pfCompareLinks\" v-text=\"platform.linkName\" @click=\"isClick\"></a>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__compareWrap\">\n\t<div class=\"home__compareTitle none_border\">\n\t\t{{ platform.title }}<span class=\"home_compareSubTitle\">{{ platform.subTitle }}</span>\n\t</div>\n\t<ul class=\"home__pfCompareBox clearfix\">\n\t\t<li v-for=\"item in platform.list\" \n\t\t\tclass=\"pfCompareList mask__website fl\" \n\t\t\t:data-id=\"item.dataId\" \n\t\t\t@click=\"noneAlert\">\n\t\t\t<img :src=\"item.imgSrc\" class=\"logoImg\">\n\t\t\t<div class=\"home__pfName searchVal\">{{ item.name }}</div>\n\t\t\t<div class=\"home__pfMoney\">{{ item.money }}</div>\n\t\t</li>\n\t</ul>\n\t<a v-link=\"{path: '/platform'}\" class=\"home__pfCompareLinks\" v-text=\"platform.linkName\" @click=\"isClick\"></a>\n</div>\n";
 
 /***/ },
 /* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(28)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14249,20 +13991,14 @@
 	__vue_template__ = __webpack_require__(29)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-1a567205/C-category.vue"
+	  var id = "_v-f70aa80e/C-category.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14286,7 +14022,8 @@
 		props: ['category'],
 		vuex: {
 			actions: {
-				isClick: _actions.isClick
+				isClick: _actions.isClick,
+				noneAlert: _actions.noneAlert
 			}
 		}
 	};
@@ -14294,13 +14031,16 @@
 	//
 	// <template>
 	// 	<div class="home__compareWrap clearfix">
-	// 		<a v-link="{path: '/category'}" 
+	// 		<a v-link="{path: '/category'}"
 	// 		   class="home__compareTitle"
 	// 		   @click="isClick">
 	// 			{{ category.title }}
 	// 			<i class="icon iconfont fr"></i>
 	// 		</a>
-	// 		<div v-for="item in category.list" class="home__idyCompareList fl mask__cate" :data-id="item.dataId">
+	// 		<div v-for="item in category.list"
+	// 			 class="home__idyCompareList fl mask__cate"
+	// 			 :data-id="item.dataId"
+	// 			 @click="noneAlert">
 	// 			<div class="home__idyName searchVal">{{ item.name }}</div>
 	// 			<div class="home__idyMoney">{{ item.title }}</div>
 	// 			<div class="home__idyMoney">{{ item.money }} <span class="unit">{{ item.unit }}</span></div>
@@ -14313,14 +14053,13 @@
 /* 29 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__compareWrap clearfix\">\n\t<a v-link=\"{path: '/category'}\" \n\t   class=\"home__compareTitle\"\n\t   @click=\"isClick\">\n\t\t{{ category.title }}\n\t\t<i class=\"icon iconfont fr\"></i>\n\t</a>\n\t<div v-for=\"item in category.list\" class=\"home__idyCompareList fl mask__cate\" :data-id=\"item.dataId\">\n\t\t<div class=\"home__idyName searchVal\">{{ item.name }}</div>\n\t\t<div class=\"home__idyMoney\">{{ item.title }}</div>\n\t\t<div class=\"home__idyMoney\">{{ item.money }} <span class=\"unit\">{{ item.unit }}</span></div>\n\t</div>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__compareWrap clearfix\">\n\t<a v-link=\"{path: '/category'}\" \n\t   class=\"home__compareTitle\"\n\t   @click=\"isClick\">\n\t\t{{ category.title }}\n\t\t<i class=\"icon iconfont fr\"></i>\n\t</a>\n\t<div v-for=\"item in category.list\" \n\t\t class=\"home__idyCompareList fl mask__cate\" \n\t\t :data-id=\"item.dataId\"\n\t\t @click=\"noneAlert\">\n\t\t<div class=\"home__idyName searchVal\">{{ item.name }}</div>\n\t\t<div class=\"home__idyMoney\">{{ item.title }}</div>\n\t\t<div class=\"home__idyMoney\">{{ item.money }} <span class=\"unit\">{{ item.unit }}</span></div>\n\t</div>\n</div>\n";
 
 /***/ },
 /* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(31)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14329,20 +14068,14 @@
 	__vue_template__ = __webpack_require__(32)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-088f93c6/C-funding.vue"
+	  var id = "_v-24c24b52/C-funding.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14366,7 +14099,8 @@
 		props: ['funding'],
 		vuex: {
 			actions: {
-				isClick: _actions.isClick
+				isClick: _actions.isClick,
+				noneAlert: _actions.noneAlert
 			}
 		}
 	};
@@ -14380,7 +14114,8 @@
 	// 		</a>
 	// 		<ul class="home__fundingProPanel">
 	// 			<li v-for="item in funding.list" class="home__fundingProList">
-	// 				<a :href="item.itemLink" class="home__fundingLinks">
+	// 				<!-- :href="item.itemLink" -->
+	// 				<a @click="noneAlert" class="home__fundingLinks">
 	// 					<div class="home__fundingName container">
 	// 						{{ item.name }}
 	// 						<div class="home__logo h_bg2">{{ item.platform }}</div>
@@ -14417,14 +14152,13 @@
 /* 32 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__compareWrap clearfix\">\n\t<a v-link=\"{path: '/list'}\" class=\"home__compareTitle none_border\" @click=\"isClick\">\n\t\t{{ funding.title }}\n\t\t<i class=\"icon iconfont fr\"></i>\n\t</a>\n\t<ul class=\"home__fundingProPanel\">\n\t\t<li v-for=\"item in funding.list\" class=\"home__fundingProList\">\n\t\t\t<a :href=\"item.itemLink\" class=\"home__fundingLinks\">\n\t\t\t\t<div class=\"home__fundingName container\">\n\t\t\t\t\t{{ item.name }}\n\t\t\t\t\t<div class=\"home__logo h_bg2\">{{ item.platform }}</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"home__fundingImg\" :style=\"'background-image: url('+item.imgSrc+')'\">\n\t\t\t\t\t<div class=\"home__fundingStatus fStyle2\">{{ item.status }}</div>\n\t\t\t\t</div>\n\t\t\t\t<div v-if=\"item.flag == '1'\" class=\"home__fundingDescBox clearfix\">\n\t\t\t\t\t<div class=\"home__fundingCate fl\">{{ item.title }}</div>\n\t\t\t\t\t<div class=\"home__fundingMoney fl\">{{ item.money }}</div><span class=\"home__unit\">{{ item.unit }}</span>\n\t\t\t\t</div>\n\t\t\t\t<div v-else class=\"home__fundingDescBox home__fcMoneyBox clearfix\">\n\t\t\t\t\t<div class=\"home__fundingCate fl\">7日筹资</div>\n\t\t\t\t\t<div class=\"home__fcWrap fl\">\n\t\t\t\t\t\t<div class=\"home__fcTop\">\n\t\t\t\t\t\t\t<span class=\"moneyLight\">{{ item.abroadMoney }}</span> {{ item.abroadUnit }}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"home__fcDown\">\n\t\t\t\t\t\t\t<span class=\"moneyLight\">{{ item.money }}</span> {{ item.unit }}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</a>\n\t\t</li>\n\t\t<!-- <li class=\"home__fundingShowMore\">\n\t\t\t<a href=\"/index/list\" class=\"home__showMoreLink\">更多项目</a>\n\t\t</li> -->\n\t</ul>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__compareWrap clearfix\">\n\t<a v-link=\"{path: '/list'}\" class=\"home__compareTitle none_border\" @click=\"isClick\">\n\t\t{{ funding.title }}\n\t\t<i class=\"icon iconfont fr\"></i>\n\t</a>\n\t<ul class=\"home__fundingProPanel\">\n\t\t<li v-for=\"item in funding.list\" class=\"home__fundingProList\">\n\t\t\t<!-- :href=\"item.itemLink\" -->\n\t\t\t<a @click=\"noneAlert\" class=\"home__fundingLinks\">\n\t\t\t\t<div class=\"home__fundingName container\">\n\t\t\t\t\t{{ item.name }}\n\t\t\t\t\t<div class=\"home__logo h_bg2\">{{ item.platform }}</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"home__fundingImg\" :style=\"'background-image: url('+item.imgSrc+')'\">\n\t\t\t\t\t<div class=\"home__fundingStatus fStyle2\">{{ item.status }}</div>\n\t\t\t\t</div>\n\t\t\t\t<div v-if=\"item.flag == '1'\" class=\"home__fundingDescBox clearfix\">\n\t\t\t\t\t<div class=\"home__fundingCate fl\">{{ item.title }}</div>\n\t\t\t\t\t<div class=\"home__fundingMoney fl\">{{ item.money }}</div><span class=\"home__unit\">{{ item.unit }}</span>\n\t\t\t\t</div>\n\t\t\t\t<div v-else class=\"home__fundingDescBox home__fcMoneyBox clearfix\">\n\t\t\t\t\t<div class=\"home__fundingCate fl\">7日筹资</div>\n\t\t\t\t\t<div class=\"home__fcWrap fl\">\n\t\t\t\t\t\t<div class=\"home__fcTop\">\n\t\t\t\t\t\t\t<span class=\"moneyLight\">{{ item.abroadMoney }}</span> {{ item.abroadUnit }}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"home__fcDown\">\n\t\t\t\t\t\t\t<span class=\"moneyLight\">{{ item.money }}</span> {{ item.unit }}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</a>\n\t\t</li>\n\t\t<!-- <li class=\"home__fundingShowMore\">\n\t\t\t<a href=\"/index/list\" class=\"home__showMoreLink\">更多项目</a>\n\t\t</li> -->\n\t</ul>\n</div>\n";
 
 /***/ },
 /* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(34)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14433,20 +14167,14 @@
 	__vue_template__ = __webpack_require__(35)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-f95e0d82/C-article.vue"
+	  var id = "_v-c0f89e6a/C-article.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14470,7 +14198,8 @@
 		props: ['article'],
 		vuex: {
 			actions: {
-				isClick: _actions.isClick
+				isClick: _actions.isClick,
+				noneAlert: _actions.noneAlert
 			}
 		}
 	};
@@ -14478,7 +14207,7 @@
 	//
 	// <template>
 	// 	<div class="home__processWrap">
-	// 		<a v-link="{path: '/article'}" 
+	// 		<a v-link="{path: '/article'}"
 	// 		   class="home__processLink"
 	// 		   @click="isClick">
 	// 			<span class="home__processTitle size28" v-text="article.linkName"></span>
@@ -14491,7 +14220,7 @@
 /* 35 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__processWrap\">\n\t<a v-link=\"{path: '/article'}\" \n\t   class=\"home__processLink\"\n\t   @click=\"isClick\">\n\t\t<span class=\"home__processTitle size28\" v-text=\"article.linkName\"></span>\n\t</a>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"home__processWrap\">\n\t<a v-link=\"{path: '/article'}\" \n\t   class=\"home__processLink\"\n\t   @click=\"isClick\">\n\t\t<span class=\"home__processTitle size28\" v-text=\"article.linkName\"></span>\n\t</a>\n</div>\n";
 
 /***/ },
 /* 36 */
@@ -14504,7 +14233,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(38)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14513,20 +14241,14 @@
 	__vue_template__ = __webpack_require__(42)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-1c2ac422/Menu.vue"
+	  var id = "_v-9cb1d70a/Menu.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14596,7 +14318,7 @@
 	// 					<li class="mask__links mask__firstRow mask__website fl bg1" data-id="1">
 	// 						<a href="##" class="mask__linkTxt searchVal">淘宝众筹</a>
 	// 					</li>
-	// 					<li class="mask__links mask__firstRow mask__more fl bg0" 
+	// 					<li class="mask__links mask__firstRow mask__more fl bg0"
 	// 						data-id=""
 	// 						@click="isShowMenuMore">
 	// 						<a class="mask__linkTxt searchVal">更多</a>
@@ -14654,7 +14376,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(40)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14663,20 +14384,14 @@
 	__vue_template__ = __webpack_require__(41)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-8925f138/MenuMore.vue"
+	  var id = "_v-78995020/MenuMore.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14777,7 +14492,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(45)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14786,20 +14500,14 @@
 	__vue_template__ = __webpack_require__(55)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-31d9028e/Index.vue"
+	  var id = "_v-162c2d1a/Index.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14869,7 +14577,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(47)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14878,20 +14585,14 @@
 	__vue_template__ = __webpack_require__(48)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-553dab01/Header.vue"
+	  var id = "_v-09605c16/Header.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -14943,7 +14644,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(50)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -14952,20 +14652,14 @@
 	__vue_template__ = __webpack_require__(51)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-42c96f92/List.vue"
+	  var id = "_v-3160c386/List.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15040,7 +14734,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(53)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15049,20 +14742,14 @@
 	__vue_template__ = __webpack_require__(54)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-623b7baa/Footer.vue"
+	  var id = "_v-dd497492/Footer.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15114,7 +14801,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(57)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15123,20 +14809,14 @@
 	__vue_template__ = __webpack_require__(64)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-54c8dff8/Index.vue"
+	  var id = "_v-34e024e0/Index.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15200,7 +14880,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(59)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15209,20 +14888,14 @@
 	__vue_template__ = __webpack_require__(60)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-29cccc4b/Header.vue"
+	  var id = "_v-1864203f/Header.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15293,7 +14966,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(62)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15302,20 +14974,14 @@
 	__vue_template__ = __webpack_require__(63)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-96b31caa/Content.vue"
+	  var id = "_v-ce0cc792/Content.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15396,7 +15062,7 @@
 	// <template>
 	// 	<div id="gkvMainCxt">
 	// 		<ul class="navTab clearfix">
-	// 			<li v-for="item in list.tabs" 
+	// 			<li v-for="item in list.tabs"
 	// 				class="navTab__list fl"
 	// 				:class="{on: list.activeTabs == item}"
 	// 				@click="listTabs(item)">
@@ -15406,7 +15072,7 @@
 	// 		<ul class="itemBox">
 	// 			<li v-for="item in list.items[list.activeTitle][list.activeTabs]"
 	// 				class="item__list">
-	// 				<a v-link="{name:'product', params: {productId: 25638}}" 
+	// 				<a v-link="{name:'product', params: {productId: 25638}}"
 	// 				   class="item__links"
 	// 				   @click="isClick">
 	// 					<div class="item__title">
@@ -15454,7 +15120,7 @@
 	// 						<!-- 无限众筹 start -->
 	// 						<li class="item__descList forer end fl"
 	// 							v-if="item.foreverStatus==1">
-	// 							<div class="item__descTitle">已筹金额</div> 
+	// 							<div class="item__descTitle">已筹金额</div>
 	// 							<div class="item__descDataWrap">
 	// 								<div class="item__fcTop">
 	// 									<div class="item__fcTopChild">
@@ -15507,7 +15173,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__webpack_require__(66)
 	__vue_script__ = __webpack_require__(68)
 	if (__vue_script__ &&
@@ -15517,20 +15182,14 @@
 	__vue_template__ = __webpack_require__(87)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-dd7074ce/Index.vue"
+	  var id = "_v-a50b05b6/Index.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15639,7 +15298,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(70)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15648,20 +15306,14 @@
 	__vue_template__ = __webpack_require__(71)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-38b16d54/Header.vue"
+	  var id = "_v-4dcb834a/Header.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15726,7 +15378,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(73)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15735,20 +15386,14 @@
 	__vue_template__ = __webpack_require__(86)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-361b9600/Content.vue"
+	  var id = "_v-107e9a8c/Content.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15817,7 +15462,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(75)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15826,20 +15470,14 @@
 	__vue_template__ = __webpack_require__(76)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-057a0d9f/C-rank.vue"
+	  var id = "_v-6f9e4793/C-rank.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15877,7 +15515,7 @@
 	// 				<font class="info1__proNum">{{ platform.rankTop.count }}</font>
 	// 			</div>
 	// 			<div class="info1__totalMoneyBox">
-	// 				<font class="info1__totalMoney size80">{{ platform.rankTop.money }}</font> 
+	// 				<font class="info1__totalMoney size80">{{ platform.rankTop.money }}</font>
 	// 				<font class="info1__unit size30">{{ platform.rankTop.unit }}</font>
 	// 			</div>
 	// 		</div>
@@ -15886,7 +15524,7 @@
 	// 				<div class="info2__infoName size24">{{ item.name }}</div>
 	// 				<div class="info2__proNum size20">{{ item.count }}</div>
 	// 				<div class="info2__totalMoneyBox">
-	// 					<font class="info2__totalMoney size36">{{ item.money }}</font> 
+	// 					<font class="info2__totalMoney size36">{{ item.money }}</font>
 	// 					<font class="info2__unit size24">{{ item.unit }}</font>
 	// 				</div>
 	// 			</div>
@@ -15905,7 +15543,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(78)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -15914,20 +15551,14 @@
 	__vue_template__ = __webpack_require__(79)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-30e801fb/C-chart.vue"
+	  var id = "_v-0b4b0687/C-chart.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -15983,7 +15614,7 @@
 	//
 	// <template>
 	// 	<ul class="pf__platformTabs clearfix">
-	// 		<li v-for="item in tabs.chartData" 
+	// 		<li v-for="item in tabs.chartData"
 	// 			class="pf__platformTabsList size28 fl on"
 	// 			@click="clickTabs($key)">
 	// 			{{ $key }}
@@ -15993,8 +15624,8 @@
 	// 		</li>
 	// 	</ul>
 	// 	<ul class="pf__subPlatformTabs">
-	// 		<li v-for="($partKey, item) in tabs.chartData" 
-	// 			class="pf__subPlatformList" 
+	// 		<li v-for="($partKey, item) in tabs.chartData"
+	// 			class="pf__subPlatformList"
 	// 			:class="{hide: $partKey != tabs.activeTab}">
 	// 			<ul class="pf__chartsTabs clearfix">
 	// 				<li v-for="subItem in item" class="pf__chartsList fl">
@@ -16025,7 +15656,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(81)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -16034,20 +15664,14 @@
 	__vue_template__ = __webpack_require__(82)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-57013e94/C-rules.vue"
+	  var id = "_v-31644320/C-rules.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16081,7 +15705,7 @@
 	// 	<div class="pf__rulesBox">
 	// 		<div class="rules__title container size36">{{ rules.title }}</div>
 	// 		<ul class="rules__headBox container size28 clearfix bgblue4">
-	// 			<li v-for="item in rules.tableHeader" 
+	// 			<li v-for="item in rules.tableHeader"
 	// 				:class="'rules__items'+$index"
 	// 				class="fl">{{ item }}</li>
 	// 		</ul>
@@ -16120,7 +15744,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(84)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -16129,20 +15752,14 @@
 	__vue_template__ = __webpack_require__(85)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-62525b14/C-project.vue"
+	  var id = "_v-c6ea37fc/C-project.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16194,7 +15811,7 @@
 	// 	<div class="pf__projectBox">
 	// 		<ul class="pj__tabsListBox clearfix">
 	// 			<li v-for="item in project.list"
-	// 				class="pj__tabsList size28 fl" 
+	// 				class="pj__tabsList size28 fl"
 	// 				:class="{on: $key == project.activeTab}"
 	// 				@click="projectTabs($key)">
 	// 				{{ $key }}
@@ -16253,7 +15870,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__webpack_require__(89)
 	__vue_script__ = __webpack_require__(91)
 	if (__vue_script__ &&
@@ -16263,20 +15879,14 @@
 	__vue_template__ = __webpack_require__(98)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-5806846c/Index.vue"
+	  var id = "_v-03cea940/Index.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16388,7 +15998,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(93)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -16397,20 +16006,14 @@
 	__vue_template__ = __webpack_require__(94)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-167f363a/Header.vue"
+	  var id = "_v-10f31c6f/Header.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16473,7 +16076,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(96)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -16482,20 +16084,14 @@
 	__vue_template__ = __webpack_require__(97)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-4825ec13/Content.vue"
+	  var id = "_v-9b6bb3f2/Content.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16533,7 +16129,7 @@
 	// <template>
 	// 	<div id="gkvAd" class="clearfix">
 	// 		<ul class="ad__tabsBox fl">
-	// 			<li v-for="item in category.tabs" 
+	// 			<li v-for="item in category.tabs"
 	// 				class="ad__tabsList"
 	// 				:class="{on: category.activeTabs == $index}"
 	// 				@click="artTabs($index)">
@@ -16581,7 +16177,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__webpack_require__(100)
 	__vue_script__ = __webpack_require__(102)
 	if (__vue_script__ &&
@@ -16591,20 +16186,14 @@
 	__vue_template__ = __webpack_require__(109)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-75212864/Index.vue"
+	  var id = "_v-dd584020/Index.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16716,7 +16305,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(104)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -16725,20 +16313,14 @@
 	__vue_template__ = __webpack_require__(105)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-7afa3feb/Header.vue"
+	  var id = "_v-35c30c42/Header.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16802,7 +16384,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(107)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -16811,20 +16392,14 @@
 	__vue_template__ = __webpack_require__(108)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-edb11bea/Content.vue"
+	  var id = "_v-638a7697/Content.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -16924,7 +16499,7 @@
 	// 	<div id="gkvIndustry">
 	// 		<ul class="industryBox">
 	// 			<li v-for="item in category"
-	// 				class="industry__list"> 
+	// 				class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="14">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">{{ item.title }}</div>
@@ -16959,7 +16534,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="14">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">数码与周边</div>
@@ -17003,7 +16578,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="11">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">家居与安防</div>
@@ -17047,7 +16622,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="5">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">智能出行</div>
@@ -17091,7 +16666,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="9">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">环保与净化</div>
@@ -17135,7 +16710,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="8">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">手机与周边</div>
@@ -17179,7 +16754,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="3">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">机器人</div>
@@ -17223,7 +16798,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="1">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">VR/AR</div>
@@ -17267,7 +16842,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="4">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">智能穿戴</div>
@@ -17311,7 +16886,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="2">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">无人机</div>
@@ -17355,7 +16930,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="10">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">办公增强</div>
@@ -17399,7 +16974,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="12">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">创意设计</div>
@@ -17443,7 +17018,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="6">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">医疗与保健</div>
@@ -17487,7 +17062,7 @@
 	// 					</div>
 	// 				</div>
 	// 			</li>
-	// 			<li class="industry__list"> 
+	// 			<li class="industry__list">
 	// 				<div class="insdustry__positive mask__cate clearfix" data-id="7">
 	// 					<div class="idy__imgBox fl">
 	// 						<div class="idy__imgMask searchVal">智能母婴</div>
@@ -17552,7 +17127,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(111)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -17561,20 +17135,14 @@
 	__vue_template__ = __webpack_require__(112)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-d04be808/Center.vue"
+	  var id = "_v-3dec32f0/Center.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -17621,7 +17189,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__webpack_require__(114)
 	__vue_script__ = __webpack_require__(116)
 	if (__vue_script__ &&
@@ -17631,20 +17198,14 @@
 	__vue_template__ = __webpack_require__(135)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-20baa125/Index.vue"
+	  var id = "_v-72666fce/Index.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -17783,7 +17344,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(118)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -17792,20 +17352,14 @@
 	__vue_template__ = __webpack_require__(122)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-e199d72e/Banner.vue"
+	  var id = "_v-a9346816/Banner.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -17853,7 +17407,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(120)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -17862,20 +17415,14 @@
 	__vue_template__ = __webpack_require__(121)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-428fdf4a/Header.vue"
+	  var id = "_v-5ec296d6/Header.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -17899,7 +17446,8 @@
 		vuex: {
 			actions: {
 				isShowMenu: _actions.isShowMenu,
-				isClick: _actions.isClick
+				isClick: _actions.isClick,
+				noneAlert: _actions.noneAlert
 			}
 		}
 	};
@@ -17912,10 +17460,11 @@
 	// 				<i class="icon iconfont"></i>
 	// 			</div>
 	// 		</div>
-	// 		<a href="/index/center" class="pnc__main pnc__mainLink fr">
+	// 		<!-- href="/index/center" -->
+	// 		<a @click="noneAlert" class="pnc__main pnc__mainLink fr">
 	// 			<i class="icon iconfont"></i>
 	// 		</a>
-	// 		<div class="nav__pSearchBox nav__search fr" 
+	// 		<div class="nav__pSearchBox nav__search fr"
 	// 			 @click="isClick"
 	// 			 v-link="{path: '/search'}">
 	// 			<i class="icon iconfont"></i>
@@ -17928,7 +17477,7 @@
 /* 121 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"descBan__opt container\">\n\t<div class=\"nav__pMenuBox fl clearfix\" @click=\"isShowMenu\">\n\t\t<div class=\"nav__pMenuIcon fl\">\n\t\t\t<i class=\"icon iconfont\"></i>\n\t\t</div>\n\t</div>\n\t<a href=\"/index/center\" class=\"pnc__main pnc__mainLink fr\">\n\t\t<i class=\"icon iconfont\"></i>\n\t</a>\n\t<div class=\"nav__pSearchBox nav__search fr\" \n\t\t @click=\"isClick\"\n\t\t v-link=\"{path: '/search'}\">\n\t\t<i class=\"icon iconfont\"></i>\n\t</div>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div class=\"descBan__opt container\">\n\t<div class=\"nav__pMenuBox fl clearfix\" @click=\"isShowMenu\">\n\t\t<div class=\"nav__pMenuIcon fl\">\n\t\t\t<i class=\"icon iconfont\"></i>\n\t\t</div>\n\t</div>\n\t<!-- href=\"/index/center\" -->\n\t<a @click=\"noneAlert\" class=\"pnc__main pnc__mainLink fr\">\n\t\t<i class=\"icon iconfont\"></i>\n\t</a>\n\t<div class=\"nav__pSearchBox nav__search fr\" \n\t\t @click=\"isClick\"\n\t\t v-link=\"{path: '/search'}\">\n\t\t<i class=\"icon iconfont\"></i>\n\t</div>\n</div>\n";
 
 /***/ },
 /* 122 */
@@ -17941,7 +17490,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(124)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -17950,20 +17498,14 @@
 	__vue_template__ = __webpack_require__(125)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-490cdba2/Status.vue"
+	  var id = "_v-10a76c8a/Status.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -18001,7 +17543,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(127)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -18010,20 +17551,14 @@
 	__vue_template__ = __webpack_require__(128)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-04e44e2b/Info.vue"
+	  var id = "_v-2d910e92/Info.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -18121,7 +17656,7 @@
 	//
 	// 		<div class="desc__compareBox">
 	// 			<ul class="desc__compareTabs clearfix">
-	// 				<li v-for="item in args.infoTabs" 
+	// 				<li v-for="item in args.infoTabs"
 	// 					class="desc__compareTabsList size28 fl"
 	// 					:class="{on: item == args.activeInfoTab}"
 	// 					@click="protTabs(item)">
@@ -18168,7 +17703,7 @@
 	// 						</ul>
 	// 						<div class="cptRsp__barPanel fr clearfix">
 	// 							<div class="cptRsp__barBox fl">
-	// 								<div class="cptRsp__bar bg11" 
+	// 								<div class="cptRsp__bar bg11"
 	// 									 :style="{height: percent(args.currMoney,args.moneyMax)}"></div>
 	// 							</div>
 	// 							<div class="cptRsp__barBox fl">
@@ -18327,7 +17862,7 @@
 	// 				 :class="{hide:args.activeInfoTab!=='竞争者'}">
 	// 				<ul class="desc__competitorBox">
 	// 					<template v-for="item in args.compList">
-	// 						<li class="desc__competitorMore size24" 
+	// 						<li class="desc__competitorMore size24"
 	// 							v-if="args.order>10&&$index>=9">
 	// 								•<br>•<br>•
 	// 						</li>
@@ -18360,7 +17895,7 @@
 	// 					</template>
 	// 				</ul>
 	// 			</div>
-	// 			<div class="desc__compare hide" 
+	// 			<div class="desc__compare hide"
 	// 				 :class="{hide:args.activeInfoTab!=='行业比较'}">
 	// 				<a href="##" class="desc__idyTitle container">
 	// 					在 <span class="desc__titleLight">{{args.category.categoryName}}</span> 行业中
@@ -18372,9 +17907,9 @@
 	// 						</div>
 	// 						<div class="desc__compareBarBox">
 	// 							<div class="compareBar__common blue1 compareBar__max" style="width: 100%"></div>
-	// 							<div class="compareBar__common blue2 compareBar__mode" 
+	// 							<div class="compareBar__common blue2 compareBar__mode"
 	// 								 :style="{width:  percent(args.categoryStat.moneyMod,args.categoryStat.moneyMax)}"></div>
-	// 							<div class="compareBar__common fblue2 compareBar__self" 
+	// 							<div class="compareBar__common fblue2 compareBar__self"
 	// 								 :style="{width: percent(args.currMoney,args.categoryStat.moneyMax)}">
 	// 								<div class="compareBar__selfFlag">
 	// 									<i class="icon iconfont"></i>
@@ -18564,7 +18099,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(130)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -18573,20 +18107,14 @@
 	__vue_template__ = __webpack_require__(131)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-382bfd12/Charts.vue"
+	  var id = "_v-545eb49e/Charts.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -18667,7 +18195,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(133)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -18676,20 +18203,14 @@
 	__vue_template__ = __webpack_require__(134)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-3702bf3d/Reply.vue"
+	  var id = "_v-45d6339e/Reply.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -18798,7 +18319,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	var __vue_styles__ = {}
 	__vue_script__ = __webpack_require__(137)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
@@ -18807,20 +18327,14 @@
 	__vue_template__ = __webpack_require__(167)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
-	var __vue_options__ = typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports
 	if (__vue_template__) {
-	__vue_options__.template = __vue_template__
+	(typeof module.exports === "function" ? (module.exports.options || (module.exports.options = {})) : module.exports).template = __vue_template__
 	}
-	if (!__vue_options__.computed) __vue_options__.computed = {}
-	Object.keys(__vue_styles__).forEach(function (key) {
-	var module = __vue_styles__[key]
-	__vue_options__.computed[key] = function () { return module }
-	})
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
 	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "_v-05b3766b/App.vue"
+	  var id = "_v-5fe45ef7/App.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -18853,18 +18367,16 @@
 		ready: function ready() {
 			var _self = this;
 			window.addEventListener('popstate', function (e) {
-				setTimeout(function () {
-					var hash = window.location.hash.substring(2);
-					// 执行检测方法
-					console.log(hash);
-					if (_self.router.pageClick) {
-						_self.closeClick();
-						_self.goPath('next');
-					} else {
-						_self.goPath('prev');
-					}
-					alert(1);
-				}, 200);
+				var hash = window.location.hash.substring(2);
+				// 执行检测方法
+				console.log(hash);
+				if (_self.router.pageClick) {
+					console.log(_self.router.pageClick);
+					_self.closeClick();
+					_self.goPath('next');
+				} else {
+					_self.goPath('prev');
+				}
 				// console.log('改前：')
 				// console.log(_self.test.ym)
 				// // if(hash=='/index') {
@@ -20091,6 +19603,8 @@
 		state.pageClick = true;
 	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.CLOSE_CLICK, function (state) {
 		state.pageClick = false;
+	}), (0, _defineProperty3.default)(_mutations, _mutationTypes.NONE_ALERT, function (state) {
+		alert('功能善未完工，敬请期待 :)');
 	}), _mutations);
 
 	exports.default = {
@@ -20522,7 +20036,7 @@
 				'增速榜': [{
 					title: 'PowerEgg无人机',
 					statusTxt: '众筹中',
-					img: '//img30.360buyimg.com/cf/jfs/t3184/269/884813611/64066/2a2621cb/57c1040dN33b53e1e.jpg',
+					img: '//img30.360buyimg.com/cf/jfs/t3256/92/2408835734/143233/7c0be473/57e10e7fN1ac0bf53.jpg',
 					growthMoney: 4322661,
 					growthMoneyOrg: 0,
 					currMoney: 1845064.58,
@@ -21124,7 +20638,7 @@
 /* 167 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"app\">\n\t<router-view></router-view>\n</div>\n";
+	module.exports = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<div id=\"app\">\n\t<router-view></router-view>\n</div>\n";
 
 /***/ }
 /******/ ]);

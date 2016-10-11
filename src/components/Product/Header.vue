@@ -1,10 +1,11 @@
 <script type="text/javascript">
-	import { isShowMenu, isClick } from '../../vuex/actions';
+	import { isShowMenu, isClick, noneAlert } from '../../vuex/actions';
 	export default {
 		vuex: {
 			actions: {
 				isShowMenu,
-				isClick
+				isClick,
+				noneAlert
 			}
 		},
 	}
@@ -17,7 +18,8 @@
 				<i class="icon iconfont"></i>
 			</div>
 		</div>
-		<a href="/index/center" class="pnc__main pnc__mainLink fr">
+		<!-- href="/index/center" -->
+		<a @click="noneAlert" class="pnc__main pnc__mainLink fr">
 			<i class="icon iconfont"></i>
 		</a>
 		<div class="nav__pSearchBox nav__search fr" 

@@ -1,10 +1,11 @@
 <script type="text/javascript">
-	import { isClick } from '../../vuex/actions';
+	import { isClick, noneAlert } from '../../vuex/actions';
 	export default {
 		props: ['platform'],
 		vuex: {
 			actions: {
-				isClick
+				isClick,
+				noneAlert
 			}
 		}
 	}
@@ -16,8 +17,11 @@
 			{{ platform.title }}<span class="home_compareSubTitle">{{ platform.subTitle }}</span>
 		</div>
 		<ul class="home__pfCompareBox clearfix">
-			<li v-for="item in platform.list" class="pfCompareList mask__website fl" :data-id="item.dataId">
-				<img :src=item.imgSrc alt="" class="logoImg">
+			<li v-for="item in platform.list" 
+				class="pfCompareList mask__website fl" 
+				:data-id="item.dataId" 
+				@click="noneAlert">
+				<img :src="item.imgSrc" class="logoImg">
 				<div class="home__pfName searchVal">{{ item.name }}</div>
 				<div class="home__pfMoney">{{ item.money }}</div>
 			</li>
